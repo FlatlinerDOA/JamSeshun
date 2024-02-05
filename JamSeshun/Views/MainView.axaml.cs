@@ -1,7 +1,5 @@
 ﻿using Avalonia.Controls;
-using Avalonia.Interactivity;
 using JamSeshun.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace JamSeshun.Views;
 

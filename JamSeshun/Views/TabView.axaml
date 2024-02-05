@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="JamSeshun.Views.TabView" Background="Black" FontFamily="Consolas" FontSize="20" Foreground="White">
+  <UserControl.Styles>
+    <Style Selector="Run.chord">
+      <Setter Property="Foreground" Value="#7fc0f4" />
+    </Style>
+    <Style Selector="Run.chord.active">
+      <Setter Property="Foreground" Value="#4bd271" />
+    </Style>
+    <Style Selector="TextBlock.chord">
+      <Setter Property="Foreground" Value="#7fc0f4" />
+    </Style>
+    <Style Selector="TextBlock.chord.active">
+      <Setter Property="Foreground" Value="#4bd271" />
+    </Style>
+  </UserControl.Styles>
+  <StackPanel MaxWidth="200">
+    <TextBlock Foreground="White" Margin="0" Padding="0" Background="Red" TextWrapping="Wrap">
+      <TextBlock.Inlines>
+        <Run Text="G" Classes="chord" FontWeight="Bold" Classes.active="False" />
+        <LineBreak/>
+        <Run Text=" Do you remember a guy that's been"/>
+        <LineBreak/>
+        <Run Text="Em7" FontWeight="Bold" Classes="chord" Classes.active="True" />
+        <LineBreak/>
+        <Run Text="In such an early song"/>
+      </TextBlock.Inlines>
+    </TextBlock>
+    <Border CornerRadius="30" Background="White" HorizontalAlignment="Left" Padding="10, 5, 10, 0" VerticalAlignment="Center">
+      <TextBlock Text="G" Classes="chord" FontWeight="Bold" Classes.active="False" Padding="0" VerticalAlignment="Center" HorizontalAlignment="Center" />
+    </Border>
+    <TextBlock Text=" Do you remember a guy that's been" TextWrapping="Wrap" />
+    <TextBlock Text="Em7" FontWeight="Bold" Classes="chord" Classes.active="True" />
+    <TextBlock Text="In such an early song" TextWrapping="Wrap" />
+  </StackPanel>
+</UserControl>

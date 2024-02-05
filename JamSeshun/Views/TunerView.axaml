@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:JamSeshun.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:DataType="vm:TunerViewModel"
+             x:Class="JamSeshun.Views.TunerView">
+  <Design.DataContext>
+    <vm:TunerViewModel/>
+  </Design.DataContext>
+  <Grid>
+    <StackPanel HorizontalAlignment="Center">
+      <TextBlock Text="{Binding CurrentNote}" FontSize="20" />
+      <TextBlock Text="{Binding CurrentFrequency}" FontSize="20" />
+      <TextBlock Text="{Binding CurrentErrorInCents}" FontSize="20" />
+      <Button Command="{Binding StartCommand}">Start</Button>
+      <Rectangle Width="10" Height="20" />
+    </StackPanel>
+  </Grid>
+</UserControl>

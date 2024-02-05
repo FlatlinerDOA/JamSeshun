@@ -12,7 +12,7 @@ namespace JamSeshun;
 
 public partial class App : Application
 {
-    public static IServiceProvider ServiceProvider { get; private set; } 
+    public static IServiceProvider ServiceProvider { get; internal set; } 
 
     public override void Initialize()
     {
@@ -21,8 +21,6 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        ServiceProvider = ServiceRegistry.ConfigureServices();
-
         // Line below is needed to remove Avalonia data validation.
         // Without this line you will get duplicate validations from both Avalonia and CT
         BindingPlugins.DataValidators.RemoveAt(0);

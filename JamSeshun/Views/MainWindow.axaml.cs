@@ -12,7 +12,7 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
-    public MainWindow(MainViewModel context)
+    public MainWindow(TunerViewModel context)
     {
         InitializeComponent();
         this.DataContext = context;

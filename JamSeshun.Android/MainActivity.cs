@@ -3,6 +3,9 @@ using Android.Content.PM;
 
 using Avalonia;
 using Avalonia.Android;
+using JamSeshun.Services;
+using JamSeshun.Services.Tuning;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace JamSeshun.Android;
 
@@ -17,6 +20,10 @@ public class MainActivity : AvaloniaMainActivity<App>
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
         return base.CustomizeAppBuilder(builder)
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<ITuningService, AndroidTuningService>();
+            })
             .WithInterFont();
     }
 }

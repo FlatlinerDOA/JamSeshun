@@ -1,6 +1,9 @@
 ﻿using System;
 
 using Avalonia;
+using JamSeshun.Services;
+using JamSeshun.Services.Tuning;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace JamSeshun.Desktop;
 
@@ -16,6 +19,10 @@ class Program
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<ITuningService>(new WindowsTuningService());
+            })
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace();

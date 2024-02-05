@@ -1,6 +1,8 @@
 ﻿using System;
 
 using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls;
 using JamSeshun.Services;
 using JamSeshun.Services.Tuning;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +27,17 @@ class Program
             })
             .UsePlatformDetect()
             .WithInterFont()
-            .LogToTrace();
+            .LogToTrace()
+            .AfterSetup(a => 
+            {                
+                if (App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    desktop.MainWindow = App.ServiceProvider.GetKeyedService<Window>("MainWindow");
+                }
+                else if (App.Current.ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
+                {
+                    singleViewPlatform.MainView = App.ServiceProvider.GetKeyedService<Control>("MainView");
+                }
+            });
 
 }

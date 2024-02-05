@@ -34,6 +34,7 @@ public sealed class TunerViewModel : ViewModelBase
         {
             this.CurrentNote = x.ClosestNote.Name;
             this.CurrentFrequency = x.EstimatedFrequency;
+            this.CurrentErrorInCents = x.ErrorInCents;
         });
     }
 
@@ -53,7 +54,7 @@ public sealed class TunerViewModel : ViewModelBase
     public string CurrentNote
     {
         get { return currentNote; }
-        set { currentNote = value; }
+        set { this.SetProperty(ref currentNote, value); }
     }
 
     public RelayCommand StartCommand { get; }

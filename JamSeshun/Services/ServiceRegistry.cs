@@ -39,12 +39,12 @@ public static class ServiceRegistry
 
     public static AppBuilder ConfigureServices(this AppBuilder appBuilder, Action<ServiceCollection> configure)
     {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.WithCommonServices().WithViewsAndViewModels();
+        configure(serviceCollection);
+        App.ServiceProvider = serviceCollection.BuildServiceProvider();
         return appBuilder.With<IServiceProvider>(() =>
         {
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.WithCommonServices().WithViewsAndViewModels();
-            configure(serviceCollection);
-            App.ServiceProvider = serviceCollection.BuildServiceProvider();
             return App.ServiceProvider;
         });
     }

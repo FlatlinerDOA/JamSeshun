@@ -11,17 +11,18 @@ on:
 
 jobs:
   build:
-
     runs-on: macos-latest
     steps:
-    - name: check Xcode version
+    - name: Setup Xcode version
+      uses: maxim-lobanov/setup-xcode@v1.6.0
+      with:
+        xcode-version: 15.0 # optional, default is latest
+    - name: Check Xcode version
       run: /usr/bin/xcodebuild -version
-      
-    - name: checkout repository
-      uses: actions/checkout@v3
-    
+    - name: Checkout repository
+      uses: actions/checkout@v4
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 7.0.x
     - name: Restore workload

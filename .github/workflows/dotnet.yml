@@ -18,7 +18,7 @@ jobs:
       run: /usr/bin/xcodebuild -version
       
     - name: checkout repository
-    - uses: actions/checkout@v3
+      uses: actions/checkout@v3
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v3

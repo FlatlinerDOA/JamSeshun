@@ -7,7 +7,7 @@ namespace JamSeshun.Views
     {
         public TunerView()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
 
         public TunerView(TunerViewModel viewModel) : this()

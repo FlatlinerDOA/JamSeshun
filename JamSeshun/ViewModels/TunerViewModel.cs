@@ -10,12 +10,12 @@ public sealed class TunerViewModel : ViewModelBase
     private readonly ITuningService tuningService;
     private float currentFrequency;
     private float currentErrorInCents;
+    private float currentErrorInDegrees;
     private string currentNote;
 
     public TunerViewModel()
     {
         this.StartCommand = new RelayCommand(() => this.Start());
-
     }
 
     public TunerViewModel(ITuningService tuningService) : this()
@@ -32,9 +32,10 @@ public sealed class TunerViewModel : ViewModelBase
         
         q.ObserveOn(AvaloniaScheduler.Instance).Subscribe(x =>
         {
-            this.CurrentNote = x.ClosestNote.Name;
+            this.CurrentNote = x.Fundamental.ToString();
             this.CurrentFrequency = x.EstimatedFrequency;
             this.CurrentErrorInCents = x.ErrorInCents;
+            this.CurrentErrorInDegrees = (360f + x.ErrorInCents) % 360f; // * (Math.PI ^ 2d * 45d);
         });
     }
 
@@ -49,6 +50,12 @@ public sealed class TunerViewModel : ViewModelBase
     {
         get => this.currentErrorInCents;
         set => this.SetProperty(ref this.currentErrorInCents, value);
+    }
+
+    public float CurrentErrorInDegrees
+    {
+        get => this.currentErrorInDegrees;
+        set => this.SetProperty(ref this.currentErrorInDegrees, value);
     }
 
     public string CurrentNote

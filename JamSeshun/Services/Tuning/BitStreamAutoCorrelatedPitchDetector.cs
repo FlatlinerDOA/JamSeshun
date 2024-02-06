@@ -5,23 +5,6 @@ namespace JamSeshun.Services.Tuning;
 
 public sealed class BitStreamAutoCorrelatedPitchDetector
 {
-    private static readonly Note[] NoteBaseFreqs = new Note[]
-        {
-            new("C", 16.35f),
-            new("C#", 17.32f),
-            new("D", 18.35f),
-            new("Eb", 19.45f),
-            new("E", 20.60f),
-            new("F", 21.83f),
-            new("F#", 23.12f),
-            new("G", 24.50f),
-            new("G#", 25.96f),
-            new("A", 27.50f),
-            new("Bb", 29.14f),
-            new("B", 30.87f),
-        };
-    private readonly List<Note> allNotes;
-
     private const float minimumFrequency = 75f; //50.0f;
     private const float maximumFrequency = 335.0f; //500.0f;
     private readonly int sampleRate;
@@ -35,34 +18,22 @@ public sealed class BitStreamAutoCorrelatedPitchDetector
         this.sampleRate = sampleRate;
         this.minPeriod = (float)this.sampleRate / maximumFrequency;
         this.maxPeriod = (float)this.sampleRate / minimumFrequency;
-
-        this.allNotes = (from note in NoteBaseFreqs
-                         from octave in Enumerable.Range(0, 9)
-                         let shiftedNote = note.ShiftOctave(octave)
-                         where shiftedNote.Frequency >= minimumFrequency && shiftedNote.Frequency <= maximumFrequency
-                         select shiftedNote).ToList();
-
-        this.SampleBufferSize = SmallestPow2((int)Math.Ceiling(this.maxPeriod)) * 2;
+        this.SampleBufferSize = ((int)Math.Ceiling(this.maxPeriod)).SmallestPow2() * 2;
     }
 
-    public DetectedPitch DetectPitch(ReadOnlyMemory<float> signal)
+    public DetectedPitch DetectPitch(ReadOnlySpan<float> signal)
     {
         Debug.Assert(signal.Length == this.SampleBufferSize, $"Bad buffer size of {signal.Length}, expected {this.SampleBufferSize}.");
         var zeroCrosses = ZeroCrossingBits(signal);
         var correlations = new BitStreamAcf(zeroCrosses);
         var estimatedFrequency = ProcessHarmonics(correlations);
-        var n = this.GetClosestNote(estimatedFrequency);
-        return new DetectedPitch(estimatedFrequency, n, GetCents(estimatedFrequency, n.Frequency));
+        var n = Note.GetClosestNote(estimatedFrequency, minimumFrequency, maximumFrequency);
+        return new DetectedPitch(estimatedFrequency, n, n.GetCentsError(estimatedFrequency));
     }
 
-    public Note GetClosestNote(float estimatedFrequency) =>
-        estimatedFrequency <= 0.0f ? default : this.allNotes.MinBy(note => Math.Abs(note.Frequency - estimatedFrequency));
-
-    public float GetCents(float estimatedFrequency, float targetFrequency) => targetFrequency > 0.0f ? (float)(1200.0d * Math.Log2(estimatedFrequency / targetFrequency)) : 0;
-
-    private static BitArray ZeroCrossingBits(ReadOnlyMemory<float> audioSignals)
+    private static BitArray ZeroCrossingBits(ReadOnlySpan<float> audioSignals)
     {
-        var s = audioSignals.Span;
+        var s = audioSignals;
         var zeroCrosses = new BitArray(s.Length, false); // Using byte array to store zero crossing states
         bool hasCrossed = false;
         for (var i = 0; i < s.Length; i++)
@@ -83,17 +54,6 @@ public sealed class BitStreamAutoCorrelatedPitchDetector
         return zeroCrosses;
     }
 
-    private static int SmallestPow2(int n)
-    {
-        int pow = 1;
-        while (pow < n)
-        {
-            pow *= 2;
-        }
-
-        return pow;
-    }
-
     private float ProcessHarmonics(BitStreamAcf acf)
     {
         var correlationCounts = Enumerable.Range(0, acf.MaximumPosition)
@@ -105,7 +65,7 @@ public sealed class BitStreamAutoCorrelatedPitchDetector
         var (estIndex, min) = correlationCounts.Skip(1).ArgMin();
 
         var subThreshold = 0.15 * maxCount;
-        int maxDiv = (int)(estIndex / minPeriod);
+        int maxDiv = (int)(estIndex / this.minPeriod);
         for (int div = maxDiv; div != 0; div--)
         {
             bool allStrong = true;

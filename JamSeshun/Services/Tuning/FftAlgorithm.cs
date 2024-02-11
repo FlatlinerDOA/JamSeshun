@@ -20,17 +20,16 @@ public static class FftAlgorithm
     /// </remarks>
     public static ReadOnlySpan<double> Calculate(ReadOnlySpan<float> samples)
     {
-        var x = samples;
         int length;
         int bitsInLength;
-        if (IsPowerOfTwo(x.Length))
+        if (IsPowerOfTwo(samples.Length))
         {
-            length = x.Length;
+            length = samples.Length;
             bitsInLength = Log2(length) - 1;
         }
         else
         {
-            bitsInLength = Log2(x.Length);
+            bitsInLength = Log2(samples.Length);
             length = 1 << bitsInLength;
             // the items will be pad with zeros
         }
@@ -39,10 +38,10 @@ public static class FftAlgorithm
         var buffer = ArrayPool<Complex>.Shared.Rent(length);
         var data = buffer.AsSpan().Slice(0, length);
         //Complex[] data = new Complex[length];
-        for (int i = 0; i < x.Length; i++)
+        for (int i = 0; i < samples.Length; i++)
         {
             int j = ReverseBits(i, bitsInLength);
-            data[j] = new Complex((double)x[i], 0);
+            data[j] = new Complex((double)samples[i], 0);
         }
 
         // Cooley-Tukey 
@@ -113,6 +112,16 @@ public static class FftAlgorithm
             reversed |= nextBit;
         }
         return reversed;
+    }
+
+    public static uint ReverseBits(uint n)
+    {
+        n = (n >> 16) | (n << 16);
+        n = ((n & 0xff00ff00) >> 8) | ((n & 0x00ff00ff) << 8);
+        n = ((n & 0xf0f0f0f0) >> 4) | ((n & 0x0f0f0f0f) << 4);
+        n = ((n & 0xcccccccc) >> 2) | ((n & 0x33333333) << 2);
+        n = ((n & 0xaaaaaaaa) >> 1) | ((n & 0x55555555) << 1);
+        return n;
     }
 
     /// <summary>

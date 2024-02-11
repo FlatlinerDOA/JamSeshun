@@ -1,8 +1,12 @@
-﻿using System.Buffers;
-using System.Numerics;
-using System.Runtime.InteropServices;
+﻿namespace JamSeshun.Services.Tuning;
 
-namespace JamSeshun.Services.Tuning;
+using System.Buffers;
+using System.Numerics;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia;
+using MathNet.Numerics;
+using MathNet.Numerics.IntegralTransforms;
 
 /// <summary>
 /// Cooley-Tukey FFT algorithm.
@@ -72,9 +76,144 @@ public static class FftAlgorithm
         {
             spectrogram[i] = data[i].AbsPower2();
         }
-        
-        ArrayPool<Complex>.Shared.Return(buffer);
+
+        // Getting residual data bugs if we don't clear the array, as we assume we get an empty array of Complex.
+        ArrayPool<Complex>.Shared.Return(buffer, true); 
         return spectrogram;
+    }
+
+    public static double[,] GenerateSpectrogramData(ReadOnlySpan<float> samples, int fftSize = 2042)
+    {
+        //int numWindows = (samples.Length - fftSize) / hopSize + 1;
+        //double[,] spectrogram = new double[numWindows, fftSize / 2 + 1];
+
+        //for (int i = 0; i < numWindows; i++)
+        //{
+        //    int start = i * hopSize;
+        //    double[] windowedFrame = ApplyWindow(audioSamples, start, windowSize, windowType);
+
+        //}
+
+        int overlap = (fftSize / 2) + 1;
+        int stepSize = fftSize - overlap;
+        int totalFragments = (samples.Length - fftSize) / stepSize + 1;
+        double[,] spectrogram = new double[overlap, totalFragments];
+
+        for (int i = 0; i < totalFragments; i++)
+        {
+            Complex[] segment = new Complex[fftSize];
+            for (int j = 0; j < fftSize; j++)
+            {
+                if (i * stepSize + j < samples.Length)
+                {
+                    segment[j] = new Complex(samples[i * stepSize + j], 0);
+                }
+            }
+
+            Fourier.Forward(segment, FourierOptions.Matlab);
+
+            for (var t = overlap - 1; t >= 0; t--)
+            {
+                spectrogram[t, i] = segment[t].Magnitude;
+            }
+        }
+
+        return spectrogram;
+    }
+
+    private static double[] ApplyWindow(double[] signalFrame, int start, int windowSize, WindowFunction windowType)
+    {
+        double[] windowedFrame = new double[windowSize];
+
+        switch (windowType)
+        {
+            case WindowFunction.Hamming:
+                var hammingWindow = MathNet.Numerics.Window.Hamming(windowSize);
+                for (int i = 0; i < windowSize; i++)
+                {
+                    windowedFrame[i] = signalFrame[start + i] * hammingWindow[i];
+                }
+                break;
+            // Add more cases for other window functions below ...
+
+            default:
+                // Rectangular window (no change)
+                Array.Copy(signalFrame, start, windowedFrame, 0, windowSize);
+                break;
+        }
+
+        return windowedFrame;
+    }
+
+    public static WriteableBitmap RenderSpectrogramToBitmap(double[,] spectrogramData)
+    {
+        int width = spectrogramData.GetLength(1); // Time dimension
+        int height = spectrogramData.GetLength(0); // Frequency dimension
+
+        //var writableBitmap = new WriteableBitmap(new PixelSize(width, height), new Avalonia.Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+
+        //using (var fb = writableBitmap.Lock())
+        //{
+        //    for (int x = 0; x < width; x++)
+        //    {
+        //        for (int y = 0; y < height; y++)
+        //        {
+        //            double magnitude = spectrogramData[x][y];
+        //            byte intensity = (byte)(magnitude / spectrogramData.Max(m => m.Max()) * 255);
+        //            var color = (uint)(255 << 24 | intensity << 16 | intensity << 8 | intensity); // ARGB format
+
+        //            unsafe
+        //            {
+        //                uint* ptr = (uint*)fb.Address;
+        //                ptr[y * fb.RowBytes / 4 + x] = color;
+        //            }
+        //        }
+        //    }
+        //}
+
+        //return writableBitmap;
+
+        WriteableBitmap bitmap = new WriteableBitmap(
+            new PixelSize(width, height),
+            new Avalonia.Vector(96, 96),
+            PixelFormat.Rgba8888);
+
+        using (ILockedFramebuffer buffer = bitmap.Lock())
+        {
+            unsafe
+            {
+                double max = 0;
+                byte* bufferPtr = (byte*)buffer.Address;
+                for (int y = 0; y < height; y++)
+                {
+                    max = spectrogramData.MaxSecondDimension(y, max);
+                }
+                
+                for (int y = height - 1; y >= 0; y--)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        double magnitude = spectrogramData[y, x];
+                        var intensity = magnitude / max;
+                        byte colorValue = MapIntensityToColor(intensity);
+
+                        // Set RGBA (example - grayscale)
+                        *bufferPtr++ = colorValue;
+                        *bufferPtr++ = colorValue;
+                        *bufferPtr++ = colorValue;
+                        *bufferPtr++ = 255; // Alpha
+                    }
+                }
+            }
+        }
+
+        return bitmap;
+    }
+
+    private static byte MapIntensityToColor(double intensity)
+    {
+        // Example: Linear mapping 0.0 -> 0, 1.0 -> 255
+        return (byte)(intensity * 255);
     }
 
     /// <summary>
@@ -114,7 +253,7 @@ public static class FftAlgorithm
         return reversed;
     }
 
-    public static uint ReverseBits(uint n)
+    private static uint ReverseBits(uint n)
     {
         n = (n >> 16) | (n << 16);
         n = ((n & 0xff00ff00) >> 8) | ((n & 0x00ff00ff) << 8);

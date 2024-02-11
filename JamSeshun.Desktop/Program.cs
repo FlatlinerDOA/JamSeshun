@@ -6,6 +6,8 @@ using Avalonia.Controls;
 using JamSeshun.Services;
 using JamSeshun.Services.Tuning;
 using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace JamSeshun.Desktop;
 
@@ -23,6 +25,8 @@ class Program
         => AppBuilder.Configure<App>()
             .ConfigureServices(services =>
             {
+                TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+                AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
                 services.AddSingleton<ITuningService>(new WindowsTuningService());
             })
             .UsePlatformDetect()
@@ -40,4 +44,13 @@ class Program
                 }
             });
 
+    private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        Debug.WriteLine(e.ExceptionObject.ToString());
+    }
+
+    private static void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        Debug.WriteLine(e.ToString());
+    }
 }

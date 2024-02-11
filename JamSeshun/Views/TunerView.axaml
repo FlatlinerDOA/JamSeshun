@@ -17,6 +17,7 @@
       <TextBlock Text="{Binding CurrentErrorInCents}" FontSize="20" />
       <Button Command="{Binding StartCommand}">Start</Button>
       <views:TunerNeedle Angle="{Binding CurrentErrorInDegrees}" Width="200" Height="200" />
+      <!--views:Spectrogram LatestSample="{Binding LastSample}" />-->
       <Rectangle Width="10" Height="20" />
     </StackPanel>
   </Grid>

@@ -36,9 +36,8 @@ internal class WindowsTuningService : ITuningService
 
                 BufferedWaveProvider bufferedWaveProvider = new BufferedWaveProvider(waveIn.WaveFormat);
                 IWaveProvider waveProvider = new Wave16ToFloatProvider(bufferedWaveProvider);
-                
                 ////var pitchDetector = new BitStreamAutoCorrelatedPitchDetector(waveProvider.WaveFormat.SampleRate);
-                var pitchDetector = new FftPitchDetector(waveProvider.WaveFormat.SampleRate); 
+                var pitchDetector = new FftPitchDetector(waveProvider.WaveFormat.SampleRate);
                 var sampleProvider = waveProvider.ToSampleProvider();
 
                 var bufferReady = Observable.FromEventPattern<WaveInEventArgs>(
@@ -55,9 +54,7 @@ internal class WindowsTuningService : ITuningService
 
                             var sampleBuffer = ArrayPool<float>.Shared.Rent(pitchDetector.SampleBufferSize);
                             var samplesRead = sampleProvider.Read(sampleBuffer, 0, pitchDetector.SampleBufferSize);
-                            var detected = pitchDetector.DetectPitch(sampleBuffer.AsSpan()[..samplesRead]);
-                            ArrayPool<float>.Shared.Return(sampleBuffer);
-
+                            var detected = pitchDetector.DetectPitch(sampleBuffer.AsMemory().Span.Slice(0, samplesRead));
                             if (detected.Fundamental.Name != null)
                             {
                                 observer.OnNext(detected);

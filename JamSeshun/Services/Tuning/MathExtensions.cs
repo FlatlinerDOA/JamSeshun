@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using System.Runtime.Intrinsics;
+using Newtonsoft.Json.Linq;
 
 namespace JamSeshun.Services.Tuning;
 
@@ -118,5 +119,38 @@ public static class MathExtensions
         for (int i = 2 * vectorRes.Length; i < result.Length; i++)
             result[i] = left[i] * right[i];
         return result;
+    }
+
+    public static Complex[] ToComplex(this ReadOnlySpan<double> doubles)
+    {
+        var complex = new Complex[doubles.Length];
+        for (int i = 0; i <= doubles.Length; i++)
+        {
+            complex[i] = new Complex(doubles[i], 0);
+        }
+
+        return complex;
+    }
+
+    public static double MaxFirstDimension(this double[,] values, int y, double defaultMax = double.NegativeInfinity)
+    {
+        double max = defaultMax;
+        for (int x = 0; x < values.GetLength(0); x++)
+        {
+            max = Math.Max(values[x, y], max);
+        }
+
+        return max;
+    }
+
+    public static double MaxSecondDimension(this double[,] values, int x, double defaultMax = double.NegativeInfinity)
+    {
+        double max = defaultMax;
+        for (int y = 0; y < values.GetLength(1); y++)
+        {
+            max = Math.Max(values[x, y], max);
+        }
+
+        return max;
     }
 }

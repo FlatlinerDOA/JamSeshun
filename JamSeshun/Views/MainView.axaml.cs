@@ -10,7 +10,7 @@ public partial class MainView : UserControl
         InitializeComponent();
     }
 
-    public MainView(MainViewModel viewModel)
+    public MainView(TunerViewModel viewModel)
     {
         InitializeComponent();
         this.DataContext = viewModel;

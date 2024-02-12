@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace JamSeshun.Services.Tuning;
 
-public sealed class BitStreamAutoCorrelatedPitchDetector
+public sealed class BitStreamAutoCorrelatedPitchDetector : IPitchDetector
 {
     private const float minimumFrequency = 75f; //50.0f;
     private const float maximumFrequency = 335.0f; //500.0f;

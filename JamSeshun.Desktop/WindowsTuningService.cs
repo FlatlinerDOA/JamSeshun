@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Runtime.InteropServices;
 
 namespace JamSeshun.Desktop;
 
@@ -16,8 +15,9 @@ internal class WindowsTuningService : ITuningService
     {
         var devices = new AudioCaptureDevice[WaveInEvent.DeviceCount];
         for (int i = 0; i < devices.Length; i++)
-        {
-            devices[i] = new AudioCaptureDevice(i, WaveInEvent.GetCapabilities(i).ProductName);
+        {            
+            var cap = WaveInEvent.GetCapabilities(i);
+            devices[i] = new AudioCaptureDevice(i, cap.ProductName, i == 0);
         }
         
         return Observable.Return(devices);
@@ -55,6 +55,7 @@ internal class WindowsTuningService : ITuningService
                             var sampleBuffer = ArrayPool<float>.Shared.Rent(pitchDetector.SampleBufferSize);
                             var samplesRead = sampleProvider.Read(sampleBuffer, 0, pitchDetector.SampleBufferSize);
                             var detected = pitchDetector.DetectPitch(sampleBuffer.AsMemory().Span.Slice(0, samplesRead));
+                            ArrayPool<float>.Shared.Return(sampleBuffer, true);
                             if (detected.Fundamental.Name != null)
                             {
                                 observer.OnNext(detected);

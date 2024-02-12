@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
+using Xamarin.Essentials;
 
 namespace JamSeshun.Android;
 
@@ -91,8 +92,13 @@ internal class AudioStream
     /// <summary>
     /// Starts the audio stream.
     /// </summary>
-    public Task Start()
+    public async Task Start()
     {
+        if (!await CheckPermission())
+        {
+            return;
+        }
+
         try
         {
             if (!this.IsActive)
@@ -113,13 +119,13 @@ internal class AudioStream
                 Task.Run(() => this.Record());
             }
 
-            return Task.FromResult(true);
+            return;
         }
         catch (Exception ex)
         {
             Debug.WriteLine("Error in AudioStream.Start(): {0}", ex.Message);
 
-            this.Stop();
+            await this.Stop();
             throw;
         }
     }
@@ -178,7 +184,7 @@ internal class AudioStream
 
         Debug.WriteLine("AudioStream.Record(): Starting background loop to read audio stream");
 
-        while (this.IsActive)
+        while (this.IsActive && this.audioBuffers.HasObservers)
         {
             try
             {
@@ -196,7 +202,7 @@ internal class AudioStream
                 if (readResult > 0)
                 {
                     readFailureCount = 0;
-                    this.audioBuffers.OnNext(data);
+                    this.audioBuffers.OnNext(data.AsMemory().Slice(0, readResult));
                 }
                 else
                 {
@@ -220,9 +226,32 @@ internal class AudioStream
             {
                 readFailureCount++;
                 Debug.WriteLine("Error in Android AudioStream.Record(): {0}", ex.Message);
+                await this.Stop();
                 this.audioBuffers.OnError(ex);
+                return;
             }
         }
+
+        await this.Stop();
+    }
+
+    public static async Task<bool> CheckPermission()
+    {
+        var status = await Permissions.CheckStatusAsync<Permissions.Microphone>();
+        if (status == PermissionStatus.Granted)
+        {
+            return true;
+        }
+
+        if (status == PermissionStatus.Denied && DeviceInfo.Platform == DevicePlatform.iOS)
+        {
+            // Prompt the user to turn on in settings
+            // On iOS once a permission has been denied it may not be requested again from the application
+            return false;
+        }
+
+        status = await Permissions.RequestAsync<Permissions.Microphone>();
+        return status == PermissionStatus.Granted;
     }
 
     /// <summary>

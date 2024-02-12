@@ -48,12 +48,30 @@ public class FftPitchDetectorSpecification
     }
 
     [AvaloniaFact]
+    public void ShouldDetectFundamentalFromHarmonicsWithLotsOfNoise()
+    {
+        var f = new FrequencyExample(440d, 4, 1.0, 10);
+        RenderFrequency(f);
+        var actual = new FftPitchDetector(f.SampleRate).DetectPitch(f.Samples.AsSpan());
+        Assert.InRange(actual.EstimatedFrequency, 439d, 441d);
+    }
+
+    [AvaloniaFact]
     public void ShouldDetectNoisySineWave()
     {
         var f = new FrequencyExample(440d, 0, 0.1d);
         RenderFrequency(f);
         var actual = new FftPitchDetector(f.SampleRate).DetectPitch(f.Samples.AsSpan());
         Assert.InRange(actual.EstimatedFrequency, 430d, 450d);
+    }
+
+    [AvaloniaFact]
+    public void ShouldNotDetectPureNoise()
+    {
+        var f = new FrequencyExample(440d, 0, 100d, 10d, Amplitude: 0.1d);
+        RenderFrequency(f);
+        var actual = new FftPitchDetector(f.SampleRate).DetectPitch(f.Samples.AsSpan());
+        Assert.InRange(actual.EstimatedFrequency, 0d, 0.1d);
     }
 
     [AvaloniaFact]

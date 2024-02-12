@@ -26,9 +26,12 @@ public sealed class TunerViewModel : ViewModelBase
     private void Start()
     {
         var q = from audioDeviceList in this.tuningService.GetAudioCaptureDevices()
-                let audioDevice = audioDeviceList.FirstOrDefault(f => f.Name.Contains("Yeti"))
-                from detectedPitch in this.tuningService.StartDetectingPitch(audioDevice)
-                select detectedPitch;
+                let audioDevice = audioDeviceList.FirstOrDefault(f => f.IsDefault) ?? audioDeviceList.FirstOrDefault(f => f.Name.Contains("Yeti"))
+                from detectedPitches in this.tuningService.StartDetectingPitch(audioDevice).Buffer(TimeSpan.FromMilliseconds(300))
+                let n = detectedPitches.GroupBy(p => p.Fundamental).OrderByDescending(g => g.Count()).FirstOrDefault()
+                where n != null
+                let avgFreq = n.Average(d => d.EstimatedFrequency)
+                select new DetectedPitch(avgFreq, n.Key, n.Key.GetCentsError(avgFreq));
         
         q.ObserveOn(AvaloniaScheduler.Instance).Subscribe(x =>
         {

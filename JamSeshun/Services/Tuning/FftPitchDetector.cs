@@ -1,4 +1,6 @@
 ﻿using System.Buffers;
+using System.Numerics;
+using System.Numerics.Tensors;
 
 namespace JamSeshun.Services.Tuning;
 
@@ -7,11 +9,11 @@ namespace JamSeshun.Services.Tuning;
 /// License: MIT
 /// https://www.codeproject.com/script/Articles/ViewDownloads.aspx?aid=32172
 /// </summary>
-public sealed class FftPitchDetector
+public sealed class FftPitchDetector : IPitchDetector
 {
     private const float minimumFrequency = 60f; //75f; //50.0f;
-    private const float maximumFrequency = 1300f; //335.0f; //500.0f;
-    private const int BufferSeconds = 3;
+    private const float maximumFrequency = 500.0f; //1300f; //335.0f; //500.0f;
+    private const int BufferSeconds = 1;
 
     private readonly int sampleRate;
 
@@ -36,22 +38,24 @@ public sealed class FftPitchDetector
         return default;
     }
 
-    public double FindFundamentalFrequency(ReadOnlySpan<float> signal)
+    private double FindFundamentalFrequency(ReadOnlySpan<float> signal)
     {
         var spectr = FftAlgorithm.Calculate(signal);
 
-        int usefullMinSpectr = Math.Max(0, (int)(minimumFrequency * spectr.Length / sampleRate));
-        int usefullMaxSpectr = Math.Min(spectr.Length, (int)(maximumFrequency * spectr.Length / sampleRate) + 1);
+        int usefulMinSpectr = Math.Max(0, (int)(minimumFrequency * spectr.Length / sampleRate));
+        int usefulMaxSpectr = Math.Min(spectr.Length, (int)(maximumFrequency * spectr.Length / sampleRate) + 1);
+
+        double noiseThreshold = CalculateNoiseThreshold(spectr.Slice(usefulMinSpectr, usefulMaxSpectr));
 
         // find peaks in the FFT frequency bins 
         const int PeaksCount = 5;
-        var peakIndices = FindPeaks(spectr, usefullMinSpectr, usefullMaxSpectr - usefullMinSpectr, PeaksCount);
+        var peakIndices = FindPeaks(spectr, usefulMinSpectr, usefulMaxSpectr - usefulMinSpectr, noiseThreshold, PeaksCount);
 
-        if (peakIndices.IndexOf(usefullMinSpectr) >= 0)
+        if (peakIndices.IndexOf(usefulMinSpectr) >= 0 || peakIndices.Length == 0)
         {
             // lowest useful frequency bin shows active
             // looks like is no detectable sound, return 0
-            return default;
+            return 0d;
         }
 
         // select fragment to check peak values: data offset
@@ -76,6 +80,11 @@ public sealed class FftPitchDetector
                 minPeakIndex = index;
                 minOptimalInterval = interval;
             }
+        }
+
+        if (minOptimalInterval == 0)
+        {
+            return 0;
         }
 
         return (double)this.sampleRate / minOptimalInterval;
@@ -126,7 +135,18 @@ public sealed class FftPitchDetector
         return (optimalInterval, optimalValue);
     }
 
-    private static ReadOnlySpan<int> FindPeaks(ReadOnlySpan<double> values, int index, int length, int peaksCount)
+    private double CalculateNoiseThreshold(ReadOnlySpan<double> spectr, double threshold = 1.5)
+    {
+        double total = 0;
+        for (int i = 0; i < spectr.Length; i++)
+        {
+            total += spectr[i];
+        }
+
+        return total / spectr.Length * threshold; // Example threshold at 150% of average magnitude in the range
+    }
+
+    private static ReadOnlySpan<int> FindPeaks(ReadOnlySpan<double> values, int index, int length, double noiseThreshold, int peaksCount)
     {
         var peakValuesBuffer = ArrayPool<double>.Shared.Rent(peaksCount);
         var peakValues = peakValuesBuffer.AsSpan()[..peaksCount];
@@ -138,17 +158,20 @@ public sealed class FftPitchDetector
         }
 
         // find min peaked value
-        double minStoredPeak = peakValues[0];
+        double minStoredPeak = Math.Max(noiseThreshold, peakValues[0]);
         int minIndex = 0;
         for (int i = 1; i < peaksCount; i++)
         {
             if (minStoredPeak > peakValues[i]) minStoredPeak = peakValues[minIndex = i];
         }
 
+        int aboveFloorCount = 0;
         for (int i = peaksCount; i < length; i++)
         {
             if (minStoredPeak < values[i + index])
             {
+                aboveFloorCount++;
+
                 // replace the min peaked value with bigger one
                 peakValues[minIndex] = values[peakIndices[minIndex] = i + index];
 
@@ -161,8 +184,13 @@ public sealed class FftPitchDetector
             }
         }
 
-        ArrayPool<double>.Shared.Return(peakValuesBuffer);
-        return peakIndices;
+        ArrayPool<double>.Shared.Return(peakValuesBuffer, true);
+        if (aboveFloorCount > 0)
+        {
+            return peakIndices;
+        }
+
+        return Array.Empty<int>();
     }
 
 }

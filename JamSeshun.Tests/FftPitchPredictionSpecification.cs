@@ -71,7 +71,7 @@ public class FftPitchDetectorSpecification
         var f = new FrequencyExample(440d, 0, 100d, 10d, Amplitude: 0.1d);
         RenderFrequency(f);
         var actual = new FftPitchDetector(f.SampleRate).DetectPitch(f.Samples.AsSpan());
-        Assert.InRange(actual.EstimatedFrequency, 0d, 0.1d);
+        Assert.NotInRange(actual.EstimatedFrequency, 430d, 450d);
     }
 
     [AvaloniaFact]

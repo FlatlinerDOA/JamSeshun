@@ -7,12 +7,14 @@ using Avalonia.Platform;
 using Avalonia;
 using MathNet.Numerics;
 using MathNet.Numerics.IntegralTransforms;
+using MathNet.Numerics.LinearAlgebra;
 
 /// <summary>
 /// Cooley-Tukey FFT algorithm.
 /// </summary>
 public static class FftAlgorithm
 {
+    private static readonly Complex[] Zeroes = new Complex[512];
     /// <summary>
     /// Calculates FFT using Cooley-Tukey FFT algorithm.
     /// </summary>
@@ -38,15 +40,23 @@ public static class FftAlgorithm
             // the items will be pad with zeros
         }
 
-        // bit reversal
+        // AC: We must zero the complex array every time we rent it as previous calls may have left it dirty.
         var buffer = ArrayPool<Complex>.Shared.Rent(length);
         var data = buffer.AsSpan().Slice(0, length);
-        //Complex[] data = new Complex[length];
+        for (int i = 0; i < data.Length; i+= Zeroes.Length)
+        {
+            Zeroes.AsSpan().CopyTo(data[i..(i + Zeroes.Length)]);
+            //// Ensure zeroed.
+            //data[i] = Complex.Zero;
+        }
+
+        // bit reversal
         for (int i = 0; i < samples.Length; i++)
         {
             int j = ReverseBits(i, bitsInLength);
             data[j] = new Complex((double)samples[i], 0);
         }
+
 
         // Cooley-Tukey 
         for (int i = 0; i < bitsInLength; i++)
@@ -77,8 +87,7 @@ public static class FftAlgorithm
             spectrogram[i] = data[i].AbsPower2();
         }
 
-        // Getting residual data bugs if we don't clear the array, as we assume we get an empty array of Complex.
-        ArrayPool<Complex>.Shared.Return(buffer, true); 
+        ArrayPool<Complex>.Shared.Return(buffer);
         return spectrogram;
     }
 
@@ -177,7 +186,7 @@ public static class FftAlgorithm
             new PixelSize(width, height),
             new Avalonia.Vector(96, 96),
             PixelFormat.Rgba8888);
-
+        
         using (ILockedFramebuffer buffer = bitmap.Lock())
         {
             unsafe

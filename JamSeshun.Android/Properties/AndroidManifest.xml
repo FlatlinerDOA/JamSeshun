@@ -4,5 +4,4 @@
 	<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 	<uses-permission android:name="android.permission.RECORD_AUDIO" />
 	<application android:label="Jam Seshun" android:icon="@drawable/Icon" />
-	<uses-sdk android:minSdkVersion="24" android:targetSdkVersion="28" />
 </manifest>

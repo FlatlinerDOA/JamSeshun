@@ -1,8 +1,10 @@
-﻿using JamSeshun.Services.Tuning;
+﻿using Avalonia.Controls.Shapes;
+using JamSeshun.Services.Tuning;
 using NAudio.Wave;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -39,7 +41,7 @@ internal class WindowsTuningService : ITuningService
                 ////var pitchDetector = new BitStreamAutoCorrelatedPitchDetector(waveProvider.WaveFormat.SampleRate);
                 var pitchDetector = new FftPitchDetector(waveProvider.WaveFormat.SampleRate);
                 var sampleProvider = waveProvider.ToSampleProvider();
-
+                var f = new FileStream(@"C:\Temp\raw.pcm", FileMode.Create);
                 var bufferReady = Observable.FromEventPattern<WaveInEventArgs>(
                     h => waveIn.DataAvailable += h,
                     h => waveIn.DataAvailable -= h);
@@ -50,10 +52,11 @@ internal class WindowsTuningService : ITuningService
                         if (bufferedWaveProvider != null)
                         {
                             bufferedWaveProvider.AddSamples(e.EventArgs.Buffer, 0, e.EventArgs.BytesRecorded);
-                            bufferedWaveProvider.DiscardOnBufferOverflow = true;
-
-                            var sampleBuffer = ArrayPool<float>.Shared.Rent(pitchDetector.SampleBufferSize);
-                            var samplesRead = sampleProvider.Read(sampleBuffer, 0, pitchDetector.SampleBufferSize);
+                            bufferedWaveProvider.DiscardOnBufferOverflow = false; ////true;
+                            f.Write(e.EventArgs.Buffer, 0, e.EventArgs.BytesRecorded);
+                            var samplesRecorded = bufferedWaveProvider.BufferedBytes / (waveIn.WaveFormat.BitsPerSample / 8);
+                            var sampleBuffer = ArrayPool<float>.Shared.Rent(samplesRecorded);
+                            var samplesRead = sampleProvider.Read(sampleBuffer, 0, samplesRecorded);
                             var detected = pitchDetector.DetectPitch(sampleBuffer.AsMemory().Span.Slice(0, samplesRead));
                             ArrayPool<float>.Shared.Return(sampleBuffer, true);
                             if (detected.Fundamental.Name != null)
@@ -66,6 +69,12 @@ internal class WindowsTuningService : ITuningService
                     {
                         // stop recording
                         waveIn.StopRecording();
+                        f.Flush();
+                        f.Close();
+                        using var fs = File.OpenRead(@"C:\Temp\raw.pcm");
+                        var s = new RawSourceWaveStream(fs, waveIn.WaveFormat);
+                        var outpath = @"C:\Temp\raw.wav";
+                        WaveFileWriter.CreateWaveFile(outpath, s);
                     }),
                     waveIn
                 };

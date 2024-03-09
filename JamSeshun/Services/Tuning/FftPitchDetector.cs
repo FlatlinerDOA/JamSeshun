@@ -1,6 +1,5 @@
 ﻿using System.Buffers;
 using System.Numerics;
-using System.Numerics.Tensors;
 
 namespace JamSeshun.Services.Tuning;
 

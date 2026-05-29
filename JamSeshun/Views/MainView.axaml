@@ -2,18 +2,26 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:vm="clr-namespace:JamSeshun.ViewModels"
-             xmlns:services="using:JamSeshun.Services"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             xmlns:vm="using:JamSeshun.ViewModels"
+             xmlns:views="using:JamSeshun.Views"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
              x:Class="JamSeshun.Views.MainView"
-             x:DataType="vm:TunerViewModel">
+             x:DataType="vm:MainViewModel">
   <Design.DataContext>
-    <!-- This only sets the DataContext for the previewer in an IDE,
-            to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-    <vm:TunerViewModel />
+    <vm:MainViewModel />
   </Design.DataContext>
-  <!-- No need for direct references to views -->
-  <!--<views:MainView />-->
-  <!-- Placeholder for the data template registered in your ServicesRegistry -->
-  <ContentControl Content="{Binding}"/>
+
+  <TabbedPage>
+    <ContentPage Header="Tuner">
+      <views:TunerView DataContext="{Binding TunerVM}" />
+    </ContentPage>
+    <NavigationPage Header="Songs">
+      <ContentPage>
+        <views:TabListView DataContext="{Binding TabListVM}" />
+      </ContentPage>
+    </NavigationPage>
+    <ContentPage Header="Performance">
+      <views:PerformanceView DataContext="{Binding PerformanceVM}" />
+    </ContentPage>
+  </TabbedPage>
 </UserControl>

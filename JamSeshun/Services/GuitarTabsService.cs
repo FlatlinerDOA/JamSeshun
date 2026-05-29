@@ -5,7 +5,7 @@ using System.Text;
 
 namespace JamSeshun.Services;
 
-internal sealed class GuitarTabsService
+public sealed class GuitarTabsService
 {
     public async Task<Tab> GetTabAsync(TabReference tabReference) => await DownloadTabAsync(tabReference.Url);
 

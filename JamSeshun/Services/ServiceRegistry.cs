@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls;
 using JamSeshun.Services.Tuning;
 using JamSeshun.ViewModels;
@@ -11,28 +11,22 @@ public static class ServiceRegistry
 {
     public static ServiceCollection WithViewsAndViewModels(this ServiceCollection serviceCollection)
     {
-        // Add view models and views as necessary.
-        serviceCollection.AddTransient<MainViewModel>();
         serviceCollection.AddTransient<TunerViewModel>();
-        serviceCollection.AddTransient<PerformanceViewModel>();
         serviceCollection.AddTransient<TabListViewModel>();
+        serviceCollection.AddTransient<PerformanceViewModel>();
+        serviceCollection.AddTransient<MainViewModel>();
 
-
-        serviceCollection.AddKeyedTransient<Control, TunerView>("PerformanceView");
-        serviceCollection.AddKeyedTransient<Control, TunerView>("TabListView");
         serviceCollection.AddKeyedTransient<Control, TunerView>("TunerView");
-
-        // Register the template for MainViewModel which will be resolved by the ViewLocator via a naming convention replacing "ViewModel" with "View".
+        serviceCollection.AddKeyedTransient<Control, TabListView>("TabListView");
+        serviceCollection.AddKeyedTransient<Control, PerformanceView>("PerformanceView");
         serviceCollection.AddKeyedTransient<Control, MainView>("MainView");
 
-        // Here we can register the MainWindow resolved by the app, this allows your MainWindow have services injected too.
         serviceCollection.AddKeyedTransient<Window, MainWindow>("MainWindow");
         return serviceCollection;
     }
 
     public static ServiceCollection WithCommonServices(this ServiceCollection serviceCollection)
     {
-        // Register your application services with the container
         serviceCollection.AddSingleton<GuitarTabsService>();
         return serviceCollection;
     }
@@ -43,9 +37,6 @@ public static class ServiceRegistry
         serviceCollection.WithCommonServices().WithViewsAndViewModels();
         configure(serviceCollection);
         App.ServiceProvider = serviceCollection.BuildServiceProvider();
-        return appBuilder.With<IServiceProvider>(() =>
-        {
-            return App.ServiceProvider;
-        });
+        return appBuilder.With<IServiceProvider>(() => App.ServiceProvider);
     }
 }

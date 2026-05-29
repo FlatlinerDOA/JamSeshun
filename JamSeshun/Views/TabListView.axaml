@@ -3,14 +3,62 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:JamSeshun.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:DataType="vm:MainViewModel"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
+             x:DataType="vm:TabListViewModel"
              x:Class="JamSeshun.Views.TabListView">
   <Design.DataContext>
-    <!-- This only sets the DataContext for the previewer in an IDE,
-         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-    <vm:MainViewModel />
+    <vm:TabListViewModel />
   </Design.DataContext>
 
-  <ListBox ItemsSource="{Binding Favorites}"/>
+  <DockPanel>
+    <!-- Search bar -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="8,8,8,4">
+      <TextBox Grid.Column="0"
+               PlaceholderText="Search tabs..."
+               Text="{Binding SearchQuery}" />
+      <Button Grid.Column="1" Margin="4,0,0,0"
+              Command="{Binding SearchCommand}"
+              Content="Search" />
+    </Grid>
+
+    <!-- Loading indicator -->
+    <TextBlock DockPanel.Dock="Top"
+               Text="Searching..."
+               IsVisible="{Binding IsSearching}"
+               Margin="12,4" />
+
+    <!-- Results (shown when search has results) -->
+    <StackPanel DockPanel.Dock="Top"
+                IsVisible="{Binding HasSearchResults}">
+      <TextBlock Text="Results" Margin="12,8,12,4" FontWeight="SemiBold" />
+      <ListBox ItemsSource="{Binding SearchResults}"
+               SelectedItem="{Binding SelectedTabReference}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:TabReferenceViewModel">
+            <StackPanel Margin="4,2">
+              <TextBlock Text="{Binding Artist}" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding Song}" />
+              <TextBlock Text="{Binding Summary}" FontSize="11" Opacity="0.6" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </StackPanel>
+
+    <!-- Favorites (shown when no search results) -->
+    <StackPanel IsVisible="{Binding !HasSearchResults}">
+      <TextBlock Text="Favorites" Margin="12,8,12,4" FontWeight="SemiBold" />
+      <ListBox ItemsSource="{Binding Favorites}"
+               SelectedItem="{Binding SelectedTabReference}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:TabReferenceViewModel">
+            <StackPanel Margin="4,2">
+              <TextBlock Text="{Binding Artist}" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding Song}" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </StackPanel>
+  </DockPanel>
 </UserControl>

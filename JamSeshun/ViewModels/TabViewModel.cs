@@ -1,23 +1,20 @@
-﻿using JamSeshun.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using JamSeshun.Services;
 
-namespace JamSeshun.ViewModels
+namespace JamSeshun.ViewModels;
+
+public class TabViewModel : ViewModelBase
 {
-    internal class TabViewModel : ViewModelBase
+    public TabViewModel() { }
+
+    public TabViewModel(Tab tab)
     {
-        private readonly Tab tab;
-
-        public TabViewModel()
-        {
-        }
-
-        public TabViewModel(Tab tab)
-        {
-            this.tab = tab;
-        }
+        Tab = tab;
     }
+
+    public Tab? Tab { get; }
+    public string Artist => Tab?.Name.Artist ?? string.Empty;
+    public string Song => Tab?.Name.Song ?? string.Empty;
+    public string? WikiTab => Tab?.WikiTab;
+    public GuitarTuning? Tuning => Tab?.Tuning;
+    public string TuningDisplay => Tuning != null ? $"{Tuning.Name}  Capo: {(Tuning.Capo == 0 ? "None" : Tuning.Capo.ToString())}" : string.Empty;
 }

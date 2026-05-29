@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using JamSeshun.ViewModels;
 
 namespace JamSeshun.Views;
@@ -10,9 +10,9 @@ public partial class MainView : UserControl
         InitializeComponent();
     }
 
-    public MainView(TunerViewModel viewModel)
+    public MainView(MainViewModel viewModel)
     {
         InitializeComponent();
-        this.DataContext = viewModel;
+        DataContext = viewModel;
     }
 }

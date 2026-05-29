@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace JamSeshun.ViewModels
 {
-    internal class PerformanceViewModel : ViewModelBase
+    public class PerformanceViewModel : ViewModelBase
     {
     }
 }

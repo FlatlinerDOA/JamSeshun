@@ -1,7 +1,5 @@
-﻿using Avalonia.Controls;
-using Avalonia.Interactivity;
+using Avalonia.Controls;
 using JamSeshun.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace JamSeshun.Views;
 
@@ -12,9 +10,9 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
-    public MainWindow(TunerViewModel context)
+    public MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
-        this.DataContext = context;
+        DataContext = viewModel;
     }
 }

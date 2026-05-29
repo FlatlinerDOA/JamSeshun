@@ -36,7 +36,7 @@ public class MainActivity : AvaloniaMainActivity
 [Application]
 public class AndroidApp : AvaloniaAndroidApplication<App>
 {
-    public AndroidApp(IntPtr javaReference, Android.Runtime.JniHandleOwnership transfer)
+    public AndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
         : base(javaReference, transfer) { }
 
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)

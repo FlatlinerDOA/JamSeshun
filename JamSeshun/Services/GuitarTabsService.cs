@@ -193,7 +193,10 @@ public sealed class GuitarTabsService
         bool moreToDownload = false;
         do
         {
-            var html = await client.GetStringAsync($"https://www.ultimate-guitar.com/search.php?search_type=title&value={value}&page={pageToLoad}");
+            var searchUrl = pageToLoad == 1 ?
+                $"https://www.ultimate-guitar.com/search.php?search_type=title&value={value}" :
+                $"https://www.ultimate-guitar.com/search.php?page={pageToLoad}&search_type=title&value={value}";
+            var html = await client.GetStringAsync(searchUrl);
             var root = GetJsStore(html);
             var data = root?["store"]?["page"]?["data"];
             var pageCount = (int?)data?["pagination"]?["total"] ?? 0;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -27,7 +28,10 @@ class Program
             {
                 TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
                 AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-                services.AddSingleton<ITuningService>(new WindowsTuningService());
+                ITuningService tuningService = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    ? new WindowsTuningService()
+                    : new LinuxTuningService();
+                services.AddSingleton<ITuningService>(tuningService);
             })
             .UsePlatformDetect()
             .WithInterFont()

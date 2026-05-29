@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="JamSeshun.Android/JamSeshun.Android.csproj">
+    <Deploy />
+  </Project>
+  <Project Path="JamSeshun.Desktop/JamSeshun.Desktop.csproj" />
+  <Project Path="JamSeshun.iOS/JamSeshun.iOS.csproj">
+    <Deploy />
+  </Project>
+  <Project Path="JamSeshun.Tests/JamSeshun.Tests.csproj" />
+  <Project Path="JamSeshun/JamSeshun.csproj" />
+</Solution>

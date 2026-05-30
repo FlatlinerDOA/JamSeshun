@@ -3,6 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:JamSeshun.ViewModels"
+             xmlns:services="using:JamSeshun.Services"
+             xmlns:views="using:JamSeshun.Views"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
              x:DataType="vm:TabViewModel"
              x:Class="JamSeshun.Views.TabView"
@@ -13,14 +15,22 @@
   </Design.DataContext>
 
   <UserControl.Styles>
-    <!-- Chord pill in the chord strip -->
-    <Style Selector="Border.chord-pill">
+    <!-- Chord pill button -->
+    <Style Selector="Button.chord-pill">
       <Setter Property="Background" Value="#1e3a5f" />
       <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Padding" Value="10,4" />
       <Setter Property="Margin" Value="0,0,6,0" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Cursor" Value="Hand" />
     </Style>
-    <Style Selector="Border.chord-pill TextBlock">
+    <Style Selector="Button.chord-pill /template/ ContentPresenter">
+      <Setter Property="Background" Value="#1e3a5f" />
+    </Style>
+    <Style Selector="Button.chord-pill:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2a4a7f" />
+    </Style>
+    <Style Selector="Button.chord-pill TextBlock">
       <Setter Property="Foreground" Value="#7fc0f4" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="FontSize" Value="13" />
@@ -59,10 +69,32 @@
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
-            <DataTemplate>
-              <Border Classes="chord-pill">
+            <DataTemplate x:DataType="services:Chord">
+              <Button Classes="chord-pill">
+                <Button.Flyout>
+                  <Flyout Placement="Bottom">
+                    <Border Background="#1e293b"
+                            BorderBrush="#334155"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="14,12">
+                      <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding Name}"
+                                   FontSize="15" FontWeight="Bold"
+                                   Foreground="#e2e8f0"
+                                   HorizontalAlignment="Center" />
+                        <views:ChordDiagramControl Frets="{Binding Frets}"
+                                                   IsVisible="{Binding Frets, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Text="No diagram"
+                                   FontSize="11" Foreground="#475569"
+                                   HorizontalAlignment="Center"
+                                   IsVisible="{Binding Frets, Converter={x:Static ObjectConverters.IsNull}}" />
+                      </StackPanel>
+                    </Border>
+                  </Flyout>
+                </Button.Flyout>
                 <TextBlock Text="{Binding Name}" />
-              </Border>
+              </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

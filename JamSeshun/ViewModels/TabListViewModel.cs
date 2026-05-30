@@ -8,12 +8,10 @@ public partial class TabListViewModel : ViewModelBase
 {
     private readonly TabLibraryService? _library;
     private string searchQuery = string.Empty;
-    private bool isSearching;
     private TabReferenceViewModel? selectedTabReference;
 
     public TabListViewModel()
     {
-        SearchCommand = new AsyncRelayCommand(SearchAsync);
         SearchResults.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasSearchResults));
     }
 
@@ -28,7 +26,7 @@ public partial class TabListViewModel : ViewModelBase
     {
         AllTabs.Clear();
         if (_library == null) return;
-        foreach (var (id, name) in _library.GetAll())
+        foreach (var (id, name) in _library.GetAll().OrderBy(e => SongPart(e.Name)))
         {
             var parts = name.Split(" - ", 2);
             AllTabs.Add(new TabReferenceViewModel(id,
@@ -48,18 +46,7 @@ public partial class TabListViewModel : ViewModelBase
     public string SearchQuery
     {
         get => searchQuery;
-        set
-        {
-            SetProperty(ref searchQuery, value);
-            if (string.IsNullOrWhiteSpace(value))
-                SearchResults.Clear();
-        }
-    }
-
-    public bool IsSearching
-    {
-        get => isSearching;
-        private set => SetProperty(ref isSearching, value);
+        set { SetProperty(ref searchQuery, value); FilterResults(); }
     }
 
     public TabReferenceViewModel? SelectedTabReference
@@ -72,29 +59,22 @@ public partial class TabListViewModel : ViewModelBase
     public ObservableCollection<TabReferenceViewModel> SearchResults { get; } = new();
     public bool HasSearchResults => SearchResults.Count > 0;
 
-    public IAsyncRelayCommand SearchCommand { get; }
-
-    private async Task SearchAsync()
+    private void FilterResults()
     {
-        if (string.IsNullOrWhiteSpace(SearchQuery) || _library == null)
-            return;
-
-        IsSearching = true;
         SearchResults.Clear();
-        try
+        if (string.IsNullOrWhiteSpace(searchQuery) || _library == null) return;
+        foreach (var (id, name) in _library.Search(searchQuery).OrderBy(e => SongPart(e.Name)))
         {
-            await Task.Yield();
-            foreach (var (id, name) in _library.Search(SearchQuery))
-            {
-                var parts = name.Split(" - ", 2);
-                SearchResults.Add(new TabReferenceViewModel(id,
-                    parts.Length > 1 ? parts[0] : name,
-                    parts.Length > 1 ? parts[1] : string.Empty));
-            }
+            var parts = name.Split(" - ", 2);
+            SearchResults.Add(new TabReferenceViewModel(id,
+                parts.Length > 1 ? parts[0] : name,
+                parts.Length > 1 ? parts[1] : string.Empty));
         }
-        finally
-        {
-            IsSearching = false;
-        }
+    }
+
+    private static string SongPart(string name)
+    {
+        var idx = name.IndexOf(" - ", StringComparison.Ordinal);
+        return idx >= 0 ? name[(idx + 3)..] : name;
     }
 }

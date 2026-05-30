@@ -10,11 +10,11 @@ public sealed class TabLibraryService : IDisposable
 
     public event Action? Changed;
 
-    public TabLibraryService()
+    public TabLibraryService() : this(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JamSeshun")) { }
+
+    public TabLibraryService(string dataDir)
     {
-        var dataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "JamSeshun");
         Directory.CreateDirectory(dataDir);
         _db = new LiteDatabase(Path.Combine(dataDir, "tabs.db"));
         _entries = _db.GetCollection<StoreEntry>("tabs");
@@ -41,10 +41,13 @@ public sealed class TabLibraryService : IDisposable
     public IEnumerable<(Guid Id, string Name)> GetAll() =>
         _entries.FindAll().Select(e => (e.Id, e.Name));
 
-    public IEnumerable<(Guid Id, string Name)> Search(string query) =>
-        _entries.FindAll()
-                .Where(e => e.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .Select(e => (e.Id, e.Name));
+    public IEnumerable<(Guid Id, string Name)> Search(string query)
+    {
+        var terms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return _entries.FindAll()
+                       .Where(e => terms.All(t => e.Name.Contains(t, StringComparison.OrdinalIgnoreCase)))
+                       .Select(e => (e.Id, e.Name));
+    }
 
     public void Delete(Guid id)
     {

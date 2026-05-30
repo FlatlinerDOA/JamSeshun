@@ -47,26 +47,8 @@
 
     <!-- ── Search bar ──────────────────────────────────────── -->
     <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12,10">
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBox Grid.Column="0"
-                 PlaceholderText="Search tabs..."
-                 Text="{Binding SearchQuery}"
-                 VerticalAlignment="Center" />
-        <Button Grid.Column="1" Margin="8,0,0,0"
-                Command="{Binding SearchCommand}"
-                Content="Search"
-                VerticalAlignment="Center" />
-      </Grid>
-    </Border>
-
-    <!-- ── Loading ────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Top"
-            Background="#0f172a"
-            Padding="16,6"
-            IsVisible="{Binding IsSearching}">
-      <TextBlock Text="Searching..."
-                 Foreground="#94a3b8"
-                 FontSize="13" />
+      <TextBox PlaceholderText="Search tabs..."
+               Text="{Binding SearchQuery}" />
     </Border>
 
     <!-- ── Scrollable list area ──────────────────────────── -->
@@ -90,11 +72,11 @@
                 <Border Padding="16,10" BorderBrush="#1e293b" BorderThickness="0,0,0,1">
                   <Grid ColumnDefinitions="*,Auto">
                     <StackPanel Grid.Column="0" Spacing="2">
-                      <TextBlock Text="{Binding Artist}"
+                      <TextBlock Text="{Binding Song}"
                                  Foreground="#e2e8f0"
                                  FontWeight="SemiBold"
                                  FontSize="14" />
-                      <TextBlock Text="{Binding Song}"
+                      <TextBlock Text="{Binding Artist}"
                                  Foreground="#94a3b8"
                                  FontSize="13" />
                     </StackPanel>
@@ -128,11 +110,11 @@
                 <Border Padding="16,12" BorderBrush="#1e293b" BorderThickness="0,0,0,1">
                   <Grid ColumnDefinitions="*,Auto">
                     <StackPanel Grid.Column="0" Spacing="2">
-                      <TextBlock Text="{Binding Artist}"
+                      <TextBlock Text="{Binding Song}"
                                  Foreground="#e2e8f0"
                                  FontWeight="SemiBold"
                                  FontSize="14" />
-                      <TextBlock Text="{Binding Song}"
+                      <TextBlock Text="{Binding Artist}"
                                  Foreground="#94a3b8"
                                  FontSize="13" />
                     </StackPanel>

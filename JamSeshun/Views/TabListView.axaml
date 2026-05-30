@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:JamSeshun.ViewModels"
+             xmlns:i="https://github.com/projektanker/icons.avalonia"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
              x:DataType="vm:TabListViewModel"
              x:Class="JamSeshun.Views.TabListView"
@@ -45,8 +46,64 @@
 
   <DockPanel>
 
+    <!-- ── Toolbar ───────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12,10,12,8">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBlock Grid.Column="0"
+                   Text="MY TABS"
+                   FontSize="13" FontWeight="SemiBold"
+                   Foreground="#e2e8f0"
+                   VerticalAlignment="Center" />
+        <Button Grid.Column="1"
+                x:Name="ImportButton"
+                IsEnabled="{Binding CanImport}"
+                Background="Transparent" BorderThickness="0"
+                Padding="10,6" Margin="0,0,4,0"
+                ToolTip.Tip="Import tabs">
+          <i:Icon Value="fa-solid fa-file-import" FontSize="16" Foreground="#7fc0f4" />
+        </Button>
+        <Button Grid.Column="2"
+                x:Name="NewTabButton"
+                Background="Transparent" BorderThickness="0"
+                Padding="10,6"
+                ToolTip.Tip="New tab">
+          <i:Icon Value="fa-solid fa-plus" FontSize="16" Foreground="#7fc0f4" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- ── Import progress ───────────────────────────────────── -->
+    <Border DockPanel.Dock="Top"
+            Background="#0a0f1e"
+            Padding="12,8"
+            IsVisible="{Binding IsImporting}">
+      <StackPanel Spacing="4">
+        <ProgressBar Minimum="0"
+                     Maximum="{Binding ImportTotal}"
+                     Value="{Binding ImportCurrent}"
+                     Foreground="#7fc0f4"
+                     Background="#1e293b"
+                     Height="4" />
+        <TextBlock Text="{Binding ImportProgressText}"
+                   Foreground="#64748b"
+                   FontSize="11"
+                   HorizontalAlignment="Center" />
+      </StackPanel>
+    </Border>
+
+    <!-- ── Import status message ─────────────────────────────── -->
+    <Border DockPanel.Dock="Top"
+            Background="#0a0f1e"
+            Padding="12,6"
+            IsVisible="{Binding HasImportStatus}">
+      <TextBlock Text="{Binding ImportStatusMessage}"
+                 Foreground="#4ade80"
+                 FontSize="12"
+                 HorizontalAlignment="Center" />
+    </Border>
+
     <!-- ── Search bar ──────────────────────────────────────── -->
-    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12,10">
+    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12,0,12,10">
       <TextBox PlaceholderText="Search tabs..."
                Text="{Binding SearchQuery}" />
     </Border>

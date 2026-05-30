@@ -9,6 +9,8 @@ using JamSeshun.Services.Tuning;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using Optris.Icons.Avalonia;
+using Optris.Icons.Avalonia.FontAwesome;
 
 namespace JamSeshun.Desktop;
 
@@ -23,7 +25,9 @@ class Program
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    {
+        IconProvider.Current.Register<FontAwesomeIconProvider>();
+        return AppBuilder.Configure<App>()
             .ConfigureServices(services =>
             {
                 TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
@@ -36,8 +40,8 @@ class Program
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace()
-            .AfterSetup(a => 
-            {                
+            .AfterSetup(a =>
+            {
                 if (App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
                     desktop.MainWindow = App.ServiceProvider.GetKeyedService<Window>("MainWindow");
@@ -47,6 +51,7 @@ class Program
                     singleViewPlatform.MainView = App.ServiceProvider.GetKeyedService<Control>("MainView");
                 }
             });
+    }
 
     private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
     {

@@ -12,6 +12,8 @@ public class TabViewModel : ViewModelBase
         _tab = tab;
     }
 
+    public Guid? Id { get; set; }
+
     private SavedTab? _tab;
     public SavedTab? Tab
     {

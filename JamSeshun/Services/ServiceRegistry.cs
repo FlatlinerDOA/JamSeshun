@@ -19,7 +19,6 @@ public static class ServiceRegistry
         serviceCollection.AddKeyedTransient<Control, TunerView>("TunerView");
         serviceCollection.AddKeyedTransient<Control, TabListView>("TabListView");
         serviceCollection.AddKeyedTransient<Control, PerformanceView>("PerformanceView");
-        serviceCollection.AddKeyedTransient<Control, TabEditorView>("TabEditorView");
         serviceCollection.AddKeyedTransient<Control, MainView>("MainView");
 
         serviceCollection.AddKeyedTransient<Window, MainWindow>("MainWindow");

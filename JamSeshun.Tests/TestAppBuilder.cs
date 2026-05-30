@@ -4,6 +4,8 @@ using JamSeshun.Services;
 using JamSeshun.Services.Tuning;
 using JamSeshun.Tests;
 using Microsoft.Extensions.DependencyInjection;
+using Optris.Icons.Avalonia;
+using Optris.Icons.Avalonia.FontAwesome;
 
 [assembly: AvaloniaTestApplication(typeof(TestAppBuilder))]
 
@@ -11,7 +13,10 @@ namespace JamSeshun.Tests;
 
 public class TestAppBuilder
 {
-    public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
+    public static AppBuilder BuildAvaloniaApp()
+    {
+        IconProvider.Current.Register<FontAwesomeIconProvider>();
+        return AppBuilder.Configure<App>()
         .UseSkia()
         .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
         .WithInterFont()
@@ -19,4 +24,5 @@ public class TestAppBuilder
         {
             services.AddSingleton<ITuningService, NullTuningService>();
         });
+    }
 }

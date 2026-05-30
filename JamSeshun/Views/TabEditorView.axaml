@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:JamSeshun.ViewModels"
+             xmlns:i="https://github.com/projektanker/icons.avalonia"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
              x:DataType="vm:TabEditorViewModel"
              x:Class="JamSeshun.Views.TabEditorView"
@@ -26,7 +27,7 @@
       <Setter Property="Background" Value="#1e3a5f" />
       <Setter Property="Foreground" Value="#7fc0f4" />
       <Setter Property="BorderBrush" Value="#334155" />
-      <Setter Property="Padding" Value="20,10" />
+      <Setter Property="Padding" Value="20,8" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Button.save-btn:pointerover /template/ ContentPresenter">
@@ -40,17 +41,40 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="#475569" />
       <Setter Property="BorderBrush" Value="#334155" />
-      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="Padding" Value="12,8" />
     </Style>
   </UserControl.Styles>
 
   <DockPanel>
 
-    <!-- ── Field header ───────────────────────────────────── -->
-    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12,12,12,10">
-      <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+    <!-- ── Header with back button ────────────────────────── -->
+    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="0,8,16,8">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Button Grid.Column="0"
+                x:Name="BackButton"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="10"
+                Margin="10"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+          <i:Icon Value="fa-solid fa-arrow-left" FontSize="15" Foreground="#7fc0f4" />
+        </Button>
+        <TextBlock Grid.Column="1"
+                   Text="{Binding Title}"
+                   FontSize="18" FontWeight="Bold" Foreground="White"
+                   VerticalAlignment="Center" />
+        <Button Grid.Column="2"
+                Classes="save-btn"
+                Command="{Binding SaveCommand}"
+                Content="Save"
+                VerticalAlignment="Center" />
+      </Grid>
+    </Border>
 
-        <!-- Artist -->
+    <!-- ── Field rows ─────────────────────────────────────── -->
+    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12,8,12,4">
+      <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
         <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
                    Text="ARTIST"
                    FontSize="10" FontWeight="SemiBold" Foreground="#64748b"
@@ -59,84 +83,67 @@
                  PlaceholderText="Artist name"
                  Text="{Binding Artist}"
                  Margin="0,0,0,8" />
-
-        <!-- Song -->
         <TextBlock Grid.Row="2" Grid.Column="0"
                    Text="SONG"
                    FontSize="10" FontWeight="SemiBold" Foreground="#64748b"
                    Margin="2,0,0,4" VerticalAlignment="Bottom" />
         <TextBlock Grid.Row="2" Grid.Column="1"
-                   Text="TUNING  ·  CAPO"
+                   Text="{Binding CapoLabel}"
                    FontSize="10" FontWeight="SemiBold" Foreground="#64748b"
                    Margin="8,0,0,4" VerticalAlignment="Bottom" />
       </Grid>
     </Border>
 
     <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12,0,12,12">
-      <Grid ColumnDefinitions="*,80,50">
+      <Grid ColumnDefinitions="*,90,60">
         <TextBox Grid.Column="0"
                  PlaceholderText="Song name"
                  Text="{Binding Song}"
                  Margin="0,0,8,0" />
         <TextBox Grid.Column="1"
-                 PlaceholderText="e.g. EADGBE"
+                 PlaceholderText="EADGBE"
                  Text="{Binding Tuning}"
                  Margin="0,0,8,0" />
-        <NumericUpDown Grid.Column="2"
-                       Minimum="0" Maximum="12"
-                       Value="{Binding Capo}"
-                       FormatString="0"
-                       Background="#1e293b"
-                       Foreground="#e2e8f0"
-                       BorderBrush="#334155" />
+        <Grid Grid.Column="2" ColumnDefinitions="Auto,*,Auto">
+          <Button Grid.Column="0"
+                  Command="{Binding DecrementCapoCommand}"
+                  Content="−"
+                  Padding="10,6"
+                  Background="#1e293b"
+                  Foreground="#e2e8f0"
+                  BorderBrush="#334155" />
+          <TextBlock Grid.Column="1"
+                     Text="{Binding Capo}"
+                     Foreground="#e2e8f0"
+                     FontSize="14"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center" />
+          <Button Grid.Column="2"
+                  Command="{Binding IncrementCapoCommand}"
+                  Content="+"
+                  Padding="10,6"
+                  Background="#1e293b"
+                  Foreground="#e2e8f0"
+                  BorderBrush="#334155" />
+        </Grid>
       </Grid>
     </Border>
 
-    <!-- ── Import progress ───────────────────────────────────── -->
+    <!-- ── Saved confirmation ─────────────────────────────── -->
     <Border DockPanel.Dock="Bottom"
-            Background="#0a0f1e"
+            Background="#0f172a"
             Padding="12,8"
-            IsVisible="{Binding IsImporting}">
-      <StackPanel Spacing="4">
-        <ProgressBar Minimum="0"
-                     Maximum="{Binding ImportTotal}"
-                     Value="{Binding ImportCurrent}"
-                     Foreground="#7fc0f4"
-                     Background="#1e293b"
-                     Height="4" />
-        <TextBlock Text="{Binding ImportProgressText}"
-                   Foreground="#64748b"
-                   FontSize="11"
-                   HorizontalAlignment="Center" />
-      </StackPanel>
-    </Border>
-
-    <!-- ── Bottom bar ─────────────────────────────────────── -->
-    <Border DockPanel.Dock="Bottom" Background="#0f172a" Padding="12,10">
-      <Grid ColumnDefinitions="*,Auto,Auto,Auto">
-        <TextBlock Grid.Column="0"
-                   Text="{Binding SavedMessage}"
+            IsVisible="{Binding HasSavedMessage}">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+        <TextBlock Text="{Binding SavedMessage}"
                    Foreground="#4ade80"
                    FontWeight="SemiBold"
-                   VerticalAlignment="Center"
-                   IsVisible="{Binding HasSavedMessage}" />
-        <Button Grid.Column="1"
-                Classes="clear-btn"
-                x:Name="ImportButton"
-                IsEnabled="{Binding CanInteract}"
-                Content="Import…"
-                Margin="0,0,8,0" />
-        <Button Grid.Column="2"
-                Classes="clear-btn"
+                   VerticalAlignment="Center" />
+        <Button Classes="clear-btn"
                 Command="{Binding ClearCommand}"
-                IsEnabled="{Binding CanInteract}"
-                Content="New"
-                Margin="0,0,8,0" />
-        <Button Grid.Column="3"
-                Classes="save-btn"
-                Command="{Binding SaveCommand}"
-                Content="Save" />
-      </Grid>
+                Content="New tab"
+                Padding="10,4" />
+      </StackPanel>
     </Border>
 
     <!-- ── Tab content editor ─────────────────────────────── -->

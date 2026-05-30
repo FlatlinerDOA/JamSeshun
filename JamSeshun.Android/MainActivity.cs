@@ -11,6 +11,8 @@ using Avalonia.Controls.ApplicationLifetimes;
 using JamSeshun.Services;
 using JamSeshun.Services.Tuning;
 using Microsoft.Extensions.DependencyInjection;
+using Optris.Icons.Avalonia;
+using Optris.Icons.Avalonia.FontAwesome;
 
 namespace JamSeshun.Android;
 
@@ -43,6 +45,7 @@ public class AndroidApp : AvaloniaAndroidApplication<App>
 
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
+        IconProvider.Current.Register<FontAwesomeIconProvider>();
         return base.CustomizeAppBuilder(builder)
             .ConfigureServices(services =>
             {

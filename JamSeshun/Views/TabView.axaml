@@ -5,6 +5,7 @@
              xmlns:vm="using:JamSeshun.ViewModels"
              xmlns:services="using:JamSeshun.Services"
              xmlns:views="using:JamSeshun.Views"
+             xmlns:i="https://github.com/projektanker/icons.avalonia"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
              x:DataType="vm:TabViewModel"
              x:Class="JamSeshun.Views.TabView"
@@ -39,20 +40,20 @@
 
   <DockPanel>
 
-    <!-- ── Header (with embedded back button) ────────────── -->
-    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="0,8,16,10">
-      <Grid ColumnDefinitions="Auto,*">
+    <!-- ── Header (with embedded back + edit buttons) ────── -->
+    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="0,8,4,10">
+      <Grid ColumnDefinitions="Auto,*,Auto">
         <Button Grid.Column="0"
                 x:Name="BackButton"
                 Background="Transparent"
                 BorderThickness="0"
-                Padding="16,6,10,6"
+                Padding="10"
+                Margin="10"
+                HorizontalAlignment="Center"
                 VerticalAlignment="Center">
-          <TextBlock Text="‹"
-                     FontSize="30"
-                     Foreground="#7fc0f4"
-                     VerticalAlignment="Center" />
+          <i:Icon Value="fa-solid fa-arrow-left" FontSize="15" Foreground="#7fc0f4" />
         </Button>
+        
         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
           <TextBlock Text="{Binding Song}"
                      FontSize="20" FontWeight="Bold" Foreground="White"
@@ -65,6 +66,16 @@
                      IsVisible="{Binding HasTuning}"
                      Margin="0,2,0,0" />
         </StackPanel>
+        <Button Grid.Column="2"
+                x:Name="EditButton"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="10"
+                Margin="10"
+                VerticalAlignment="Center"
+                ToolTip.Tip="Edit tab">
+          <i:Icon Value="fa-solid fa-pen" FontSize="15" Foreground="#7fc0f4" />
+        </Button>
       </Grid>
     </Border>
 

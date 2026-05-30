@@ -21,7 +21,7 @@
       <Setter Property="Background" Value="#1e3a5f" />
       <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Padding" Value="10,4" />
-      <Setter Property="Margin" Value="0,0,6,0" />
+      <Setter Property="Margin" Value="10" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Cursor" Value="Hand" />
     </Style>

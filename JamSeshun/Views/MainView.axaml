@@ -20,8 +20,8 @@
         <views:TabListView DataContext="{Binding TabListVM}" />
       </ContentPage>
     </NavigationPage>
-    <ContentPage Header="Performance">
-      <views:PerformanceView DataContext="{Binding PerformanceVM}" />
-    </ContentPage>
+    <!-- <ContentPage Header="Performance"> -->
+    <!--   <views:PerformanceView DataContext="{Binding PerformanceVM}" /> -->
+    <!-- </ContentPage> -->
   </TabbedPage>
 </UserControl>

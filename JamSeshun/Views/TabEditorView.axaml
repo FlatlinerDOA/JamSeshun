@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:JamSeshun.ViewModels"
              xmlns:i="https://github.com/projektanker/icons.avalonia"
+             xmlns:behaviors="using:JamSeshun.Behaviors"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
              x:DataType="vm:TabEditorViewModel"
              x:Class="JamSeshun.Views.TabEditorView"
@@ -189,20 +190,20 @@
     </Border>
 
     <!-- ── Tab content editor ─────────────────────────────── -->
-    <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Auto">
-      <TextBox AcceptsReturn="True"
-               AcceptsTab="True"
-               Text="{Binding Content}"
-               FontFamily="avares://JamSeshun/Assets/Fonts#JetBrains Mono"
-               FontSize="13"
-               Foreground="#e2e8f0"
-               Background="#111827"
-               BorderThickness="0"
-               Padding="14,12"
-               TextWrapping="NoWrap"
-               PlaceholderText="Paste or type your tab here..." />
-    </ScrollViewer>
+    <TextBox AcceptsReturn="True"
+             AcceptsTab="True"
+             Text="{Binding Content}"
+             FontFamily="avares://JamSeshun/Assets/Fonts#JetBrains Mono"
+             FontSize="13"
+             Foreground="#e2e8f0"
+             Background="#111827"
+             BorderThickness="0"
+             Padding="14,12"
+             TextWrapping="NoWrap"
+             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+             ScrollViewer.VerticalScrollBarVisibility="Auto"
+             PlaceholderText="Paste or type your tab here..."
+             behaviors:InputPaneAssist.AdjustForKeyboard="True" />
 
   </DockPanel>
 </UserControl>

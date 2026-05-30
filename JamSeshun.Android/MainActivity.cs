@@ -7,9 +7,9 @@ using Avalonia.Android;
 namespace JamSeshun.Android;
 
 [Activity(
-    Label = "JamSeshun.Android",
+    Label = "@string/app_name",
     Theme = "@style/MyTheme.NoActionBar",
-    Icon = "@drawable/icon",
+    Icon = "@mipmap/icon",
     MainLauncher = true,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
 public class MainActivity : AvaloniaMainActivity

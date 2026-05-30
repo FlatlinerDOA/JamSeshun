@@ -6,6 +6,8 @@ using Android.Runtime;
 using AndroidX.Core.App;
 using Avalonia;
 using Avalonia.Android;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using JamSeshun.Services;
 using JamSeshun.Services.Tuning;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,6 +48,11 @@ public class AndroidApp : AvaloniaAndroidApplication<App>
             {
                 services.AddSingleton<ITuningService, AndroidTuningService>();
             })
-            .WithInterFont();
+            .WithInterFont()
+            .AfterSetup(_ =>
+            {
+                if (App.Current?.ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+                    singleView.MainView = App.ServiceProvider.GetKeyedService<Control>("MainView");
+            });
     }
 }

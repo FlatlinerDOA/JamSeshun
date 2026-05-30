@@ -14,6 +14,7 @@ public sealed class TunerViewModel : ViewModelBase
     private float currentErrorInDegrees;
     private float signalLevel;
     private float rawFrequency;
+    private float confidence;
     private string currentNote = string.Empty;
     private AudioCaptureDevice? selectedDevice;
 
@@ -70,6 +71,7 @@ public sealed class TunerViewModel : ViewModelBase
         recordingSession?.Dispose();
         recordingSession = null;
         SignalLevel = 0;
+        Confidence = 0;
         IsRunning = false;
     }
 
@@ -83,6 +85,7 @@ public sealed class TunerViewModel : ViewModelBase
         // Share one capture stream between the live diagnostics readout and the
         // (slower) stabilized note detection so only a single recorder is opened.
         var frames = tuningService.StartDetectingPitch(device).Publish().RefCount();
+        var stabilizer = new PitchStabilizer();
 
         recordingSession = new CompositeDisposable
         {
@@ -90,31 +93,38 @@ public sealed class TunerViewModel : ViewModelBase
             frames.ObserveOn(AvaloniaScheduler.Instance).Subscribe(f =>
             {
                 SignalLevel = f.SignalLevel;
-                RawFrequency = f.EstimatedFrequency;
+                if (f.EstimatedFrequency > 0) RawFrequency = f.EstimatedFrequency;
             }),
 
-            // Stabilized note: most common pitched note over each 300ms window.
+            // Stabilized note: confidence-gated, hysteresis-smoothed over 300ms windows.
             frames
                 .Buffer(TimeSpan.FromMilliseconds(300))
-                .Select(window => window.Where(p => p.Fundamental.Name != null).ToList())
-                .Where(window => window.Count > 0)
-                .Select(window =>
-                {
-                    var group = window.GroupBy(p => p.Fundamental).OrderByDescending(g => g.Count()).First();
-                    var avgFreq = group.Average(d => d.EstimatedFrequency);
-                    return new DetectedPitch(avgFreq, group.Key, group.Key.GetCentsError(avgFreq));
-                })
+                .Select(window => stabilizer.Process(window))
                 .ObserveOn(AvaloniaScheduler.Instance)
-                .Subscribe(x =>
-                {
-                    this.CurrentNote = x.Fundamental.ToString();
-                    this.CurrentFrequency = x.EstimatedFrequency;
-                    this.CurrentErrorInCents = x.ErrorInCents;
-                    // Map ±50 cents to ±55° from vertical for the gauge needle.
-                    this.CurrentErrorInDegrees = (float)(Math.Max(-50, Math.Min(50, x.ErrorInCents)) / 50.0 * 55.0);
-                })
+                .Subscribe(ApplyStabilizedPitch)
         };
         IsRunning = true;
+    }
+
+    private void ApplyStabilizedPitch(StabilizedPitch pitch)
+    {
+        Confidence = pitch.Confidence;
+        if (pitch.HasPitch)
+        {
+            this.CurrentNote = pitch.Note.ToString();
+            this.CurrentFrequency = pitch.Frequency;
+            this.CurrentErrorInCents = pitch.ErrorInCents;
+            // Map ±50 cents to ±55° from vertical for the gauge needle.
+            this.CurrentErrorInDegrees = (float)(Math.Max(-50, Math.Min(50, pitch.ErrorInCents)) / 50.0 * 55.0);
+        }
+        else
+        {
+            // No confident pitch — clear the readout and center the needle.
+            this.CurrentNote = string.Empty;
+            this.CurrentFrequency = 0;
+            this.CurrentErrorInCents = 0;
+            this.CurrentErrorInDegrees = 0;
+        }
     }
 
     public float CurrentFrequency
@@ -138,8 +148,11 @@ public sealed class TunerViewModel : ViewModelBase
     public string CurrentNote
     {
         get => currentNote;
-        set { SetProperty(ref currentNote, value); OnPropertyChanged(nameof(NoteDisplay)); }
+        set { SetProperty(ref currentNote, value); OnPropertyChanged(nameof(NoteDisplay)); OnPropertyChanged(nameof(HasReading)); }
     }
+
+    /// <summary>True when a confident note is currently being shown.</summary>
+    public bool HasReading => !string.IsNullOrEmpty(currentNote);
 
     public float SignalLevel
     {
@@ -152,6 +165,15 @@ public sealed class TunerViewModel : ViewModelBase
         get => rawFrequency;
         set { SetProperty(ref rawFrequency, value); OnPropertyChanged(nameof(DiagnosticsDisplay)); }
     }
+
+    public float Confidence
+    {
+        get => confidence;
+        set { SetProperty(ref confidence, value); OnPropertyChanged(nameof(DisplayOpacity)); }
+    }
+
+    /// <summary>Note/needle opacity: fades toward dim (but stays visible) as confidence drops.</summary>
+    public double DisplayOpacity => 0.35 + 0.65 * Math.Clamp(confidence, 0f, 1f);
 
     private bool isRunning;
     public bool IsRunning

@@ -35,6 +35,7 @@ public class UiSmokeTest
         vm.CurrentFrequency = 438.2f;
         vm.CurrentErrorInCents = -8.5f;
         vm.CurrentErrorInDegrees = -9.4f; // slightly flat
+        vm.Confidence = 0.9f;             // confident reading → full opacity
         window.Content = new TunerView { DataContext = vm };
         window.Show();
 

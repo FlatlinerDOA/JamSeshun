@@ -54,9 +54,10 @@
       </DockPanel>
     </Border>
 
-    <!-- ── Note display ───────────────────────────────────── -->
+    <!-- ── Note display (fades when confidence is low) ────── -->
     <Border DockPanel.Dock="Top" Padding="0,24,0,0">
-      <StackPanel HorizontalAlignment="Center" Spacing="4">
+      <StackPanel HorizontalAlignment="Center" Spacing="4"
+                  Opacity="{Binding DisplayOpacity}">
         <TextBlock Text="{Binding NoteDisplay}"
                    FontSize="80" FontWeight="Bold" Foreground="White"
                    HorizontalAlignment="Center" />
@@ -91,10 +92,19 @@
       </StackPanel>
     </Border>
 
-    <!-- ── Gauge (fills remaining space) ─────────────────── -->
-    <views:TunerNeedle Angle="{Binding CurrentErrorInDegrees}"
-                       HorizontalAlignment="Stretch"
-                       VerticalAlignment="Stretch" />
+    <!-- ── Central area: scrolling history worm + live gauge ─ -->
+    <Grid RowDefinitions="*,Auto">
+      <views:TuningWorm Grid.Row="0"
+                        Cents="{Binding CurrentErrorInCents}"
+                        IsActive="{Binding IsRunning}"
+                        HasReading="{Binding HasReading}"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch" />
+      <views:TunerNeedle Grid.Row="1"
+                         Angle="{Binding CurrentErrorInDegrees}"
+                         Height="200"
+                         HorizontalAlignment="Stretch" />
+    </Grid>
 
   </DockPanel>
 </UserControl>

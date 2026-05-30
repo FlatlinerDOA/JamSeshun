@@ -1,12 +1,18 @@
 using Avalonia.Controls;
+using Avalonia.VisualTree;
 
-namespace JamSeshun.Views
+namespace JamSeshun.Views;
+
+public partial class TabView : UserControl
 {
-    public partial class TabView : UserControl
+    public TabView()
     {
-        public TabView()
+        InitializeComponent();
+        BackButton.Click += async (_, _) =>
         {
-            InitializeComponent();
-        }
+            var nav = this.FindAncestorOfType<NavigationPage>();
+            if (nav != null)
+                await nav.PopAsync();
+        };
     }
 }

@@ -39,20 +39,33 @@
 
   <DockPanel>
 
-    <!-- ── Header ─────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="16,12,16,10">
-      <StackPanel Spacing="2">
-        <TextBlock Text="{Binding Song}"
-                   FontSize="20" FontWeight="Bold" Foreground="White"
-                   TextTrimming="CharacterEllipsis" />
-        <TextBlock Text="{Binding Artist}"
-                   FontSize="14" Foreground="#94a3b8"
-                   TextTrimming="CharacterEllipsis" />
-        <TextBlock Text="{Binding TuningDisplay}"
-                   FontSize="12" Foreground="#7fc0f4"
-                   IsVisible="{Binding HasTuning}"
-                   Margin="0,4,0,0" />
-      </StackPanel>
+    <!-- ── Header (with embedded back button) ────────────── -->
+    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="0,8,16,10">
+      <Grid ColumnDefinitions="Auto,*">
+        <Button Grid.Column="0"
+                x:Name="BackButton"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="16,6,10,6"
+                VerticalAlignment="Center">
+          <TextBlock Text="‹"
+                     FontSize="30"
+                     Foreground="#7fc0f4"
+                     VerticalAlignment="Center" />
+        </Button>
+        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Song}"
+                     FontSize="20" FontWeight="Bold" Foreground="White"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding Artist}"
+                     FontSize="14" Foreground="#94a3b8"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding TuningDisplay}"
+                     FontSize="12" Foreground="#7fc0f4"
+                     IsVisible="{Binding HasTuning}"
+                     Margin="0,2,0,0" />
+        </StackPanel>
+      </Grid>
     </Border>
 
     <!-- ── Chord strip ─────────────────────────────────────── -->

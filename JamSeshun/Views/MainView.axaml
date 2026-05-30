@@ -16,7 +16,7 @@
       <views:TunerView DataContext="{Binding TunerVM}" />
     </ContentPage>
     <NavigationPage Header="Songs">
-      <ContentPage>
+      <ContentPage NavigationPage.HasNavigationBar="False">
         <views:TabListView DataContext="{Binding TabListVM}" />
       </ContentPage>
     </NavigationPage>

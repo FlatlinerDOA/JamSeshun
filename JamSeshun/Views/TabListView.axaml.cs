@@ -37,13 +37,14 @@ public partial class TabListView : UserControl
 
         var vm = new TabViewModel();
         var tabView = new TabView { DataContext = vm };
-        var contentPage = new ContentPage
-        {
-            Header = $"{tabRef.Artist} — {tabRef.Song}",
-            Content = tabView
-        };
+        var contentPage = new ContentPage { Content = tabView };
+        NavigationPage.SetHasNavigationBar(contentPage, false);
 
         await navPage.PushAsync(contentPage);
+
+        // Clear selection so the same item can be tapped again after navigating back.
+        if (_vm != null)
+            _vm.SelectedTabReference = null;
 
         var savedTab = _vm?.LoadTab(tabRef.Id);
         if (savedTab != null)

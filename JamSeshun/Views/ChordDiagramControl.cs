@@ -32,7 +32,7 @@ public class ChordDiagramControl : Control
     private const int FretGap      = 14;   // px between frets
     private const int TopPad       = 18;   // room for X/O markers
     private const int LeftPad      = 10;
-    private const int RightPad     = 10;
+    private const int RightPad     = 24;
     private const int BottomPad    = 6;
     private const int DotRadius    = 4;
 
@@ -104,7 +104,7 @@ public class ChordDiagramControl : Control
                 new Typeface("sans-serif"),
                 9,
                 labelBrush);
-            ctx.DrawText(ft, new Point(LeftPad + (StringCount - 1) * StringGap + 2, nutY + 1));
+            ctx.DrawText(ft, new Point(LeftPad + (StringCount - 1) * StringGap + 4, nutY + FretGap / 2.0 - ft.Height / 2));
         }
 
         // ── Per-string markers ────────────────────────────────────────────────

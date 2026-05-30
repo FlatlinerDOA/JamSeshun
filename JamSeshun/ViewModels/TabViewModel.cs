@@ -76,7 +76,7 @@ public class TabViewModel : ViewModelBase
         var seen   = new HashSet<string>(StringComparer.Ordinal);
         var chords = new List<Chord>();
 
-        // Emit defined chords first so their fret data is available.
+        // Emit defined chords first (content defs beat the library).
         foreach (var (name, frets) in defs)
             if (seen.Add(name))
                 chords.Add(new Chord(name, frets));
@@ -107,7 +107,7 @@ public class TabViewModel : ViewModelBase
             {
                 foreach (var t in chordNames)
                     if (seen.Add(t))
-                        chords.Add(new Chord(t, defs.GetValueOrDefault(t)));
+                        chords.Add(new Chord(t, defs.GetValueOrDefault(t) ?? ChordLibrary.Lookup(t)));
             }
         }
 

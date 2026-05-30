@@ -54,20 +54,22 @@ internal class WindowsTuningService : ITuningService
                     {
                         buffered.AddSamples(e.EventArgs.Buffer, 0, e.EventArgs.BytesRecorded);
 
-                        // Only process when we have exactly the required number of samples.
-                        // This ensures consistent FFT resolution on every call.
-                        var samplesAvailable = buffered.BufferedBytes / bytesPerSample;
-                        if (samplesAvailable < pitchDetector.SampleBufferSize) return;
-
+                        // Process every complete fixed-size window so the detector
+                        // always gets consistent resolution. Draining each callback
+                        // (rather than processing one window) keeps latency from
+                        // accumulating when capture outpaces the window size.
                         var sampleBuffer = ArrayPool<float>.Shared.Rent(pitchDetector.SampleBufferSize);
                         try
                         {
-                            var samplesRead = sampleProvider.Read(sampleBuffer, 0, pitchDetector.SampleBufferSize);
-                            if (samplesRead != pitchDetector.SampleBufferSize) return;
+                            while (buffered.BufferedBytes / bytesPerSample >= pitchDetector.SampleBufferSize)
+                            {
+                                var samplesRead = sampleProvider.Read(sampleBuffer, 0, pitchDetector.SampleBufferSize);
+                                if (samplesRead != pitchDetector.SampleBufferSize) break;
 
-                            var detected = pitchDetector.DetectPitch(sampleBuffer.AsSpan(0, samplesRead));
-                            if (detected.Fundamental.Name != null)
-                                observer.OnNext(detected);
+                                var detected = pitchDetector.DetectPitch(sampleBuffer.AsSpan(0, samplesRead));
+                                if (detected.Fundamental.Name != null)
+                                    observer.OnNext(detected);
+                            }
                         }
                         finally
                         {

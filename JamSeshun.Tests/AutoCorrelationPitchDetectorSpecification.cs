@@ -131,4 +131,18 @@ public class AutoCorrelationPitchDetectorSpecification
         var actual = Detector().DetectPitch(silence.AsSpan());
         Assert.Null(actual.Fundamental.Name);
     }
+
+    [AvaloniaFact]
+    public void GuitarString_WithDcOffset_ShouldStillDetect()
+    {
+        // Real microphone input carries a DC bias / sub-bass rumble on top of the
+        // signal. The detector must remove it rather than reject the frame.
+        var f = FrequencyExample.GuitarString(A);
+        var samples = f.Samples;
+        for (int i = 0; i < samples.Length; i++)
+            samples[i] += 0.4f; // constant DC offset
+
+        var actual = Detector(f.SampleRate).DetectPitch(samples.AsSpan());
+        Assert.InRange(actual.EstimatedFrequency, A - Tolerance, A + Tolerance);
+    }
 }

@@ -16,7 +16,9 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
     private const float MaximumFrequency = 500.0f;
 
     // Peak must be this fraction of zero-lag energy to count as pitched (vs. noise).
-    private const double PitchedThreshold = 0.30;
+    // Kept lenient: real mic input is noisier than synthetic tones, and the view
+    // model already stabilizes results by grouping over 300ms windows.
+    private const double PitchedThreshold = 0.20;
     // First autocorrelation peak reaching this fraction of the global max is taken
     // as the fundamental — prevents octave-down errors (picking 2T, 3T over T).
     private const double PeakRatio = 0.85;
@@ -52,11 +54,25 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
         int hiLag = Math.Min(maxLag, signal.Length / 2);
         if (hiLag <= minLag) return 0d;
 
-        // Zero-lag energy: used for silence detection and peak normalization.
+        // Remove DC offset. Real microphone input carries DC bias and sub-bass
+        // rumble that inflate the zero-lag energy and otherwise swamp the
+        // correlation — synthetic test tones don't, which is why this matters
+        // only on real hardware.
+        double mean = 0;
+        for (int i = 0; i < signal.Length; i++)
+            mean += signal[i];
+        mean /= signal.Length;
+
+        var x = new double[signal.Length];
         double energy = 0;
         for (int i = 0; i < signal.Length; i++)
-            energy += signal[i] * signal[i];
+        {
+            double v = signal[i] - mean;
+            x[i] = v;
+            energy += v * v;
+        }
 
+        // Silence gate (energy is on DC-removed signal, so quiet rooms pass through).
         if (energy < 1e-4) return 0d;
 
         // Autocorrelation across the candidate lag range.
@@ -67,13 +83,15 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
             double sum = 0;
             int n = signal.Length - lag;
             for (int i = 0; i < n; i++)
-                sum += signal[i] * signal[i + lag];
+                sum += x[i] * x[i + lag];
 
             corr[lag] = sum;
             if (sum > maxPeak) maxPeak = sum;
         }
 
-        // Reject noise / unpitched signals.
+        // Reject unpitched signals. Normalized against zero-lag energy this is
+        // amplitude-independent: a clean tone scores ~0.8+, broadband noise well
+        // under the threshold.
         if (maxPeak <= 0 || maxPeak / energy < PitchedThreshold) return 0d;
 
         // Take the first local-maximum peak that reaches PeakRatio of the global

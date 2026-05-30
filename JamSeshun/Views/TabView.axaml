@@ -2,39 +2,92 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="JamSeshun.Views.TabView" Background="Black" FontFamily="Consolas" FontSize="20" Foreground="White">
+             xmlns:vm="using:JamSeshun.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
+             x:DataType="vm:TabViewModel"
+             x:Class="JamSeshun.Views.TabView"
+             Background="#111827">
+
+  <Design.DataContext>
+    <vm:TabViewModel />
+  </Design.DataContext>
+
   <UserControl.Styles>
-    <Style Selector="Run.chord">
+    <!-- Chord pill in the chord strip -->
+    <Style Selector="Border.chord-pill">
+      <Setter Property="Background" Value="#1e3a5f" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="Margin" Value="0,0,6,0" />
+    </Style>
+    <Style Selector="Border.chord-pill TextBlock">
       <Setter Property="Foreground" Value="#7fc0f4" />
-    </Style>
-    <Style Selector="Run.chord.active">
-      <Setter Property="Foreground" Value="#4bd271" />
-    </Style>
-    <Style Selector="TextBlock.chord">
-      <Setter Property="Foreground" Value="#7fc0f4" />
-    </Style>
-    <Style Selector="TextBlock.chord.active">
-      <Setter Property="Foreground" Value="#4bd271" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="13" />
     </Style>
   </UserControl.Styles>
-  <StackPanel MaxWidth="200">
-    <TextBlock Foreground="White" Margin="0" Padding="0" Background="Red" TextWrapping="Wrap">
-      <TextBlock.Inlines>
-        <Run Text="G" Classes="chord" FontWeight="Bold" Classes.active="False" />
-        <LineBreak/>
-        <Run Text=" Do you remember a guy that's been"/>
-        <LineBreak/>
-        <Run Text="Em7" FontWeight="Bold" Classes="chord" Classes.active="True" />
-        <LineBreak/>
-        <Run Text="In such an early song"/>
-      </TextBlock.Inlines>
-    </TextBlock>
-    <Border CornerRadius="30" Background="White" HorizontalAlignment="Left" Padding="10, 5, 10, 0" VerticalAlignment="Center">
-      <TextBlock Text="G" Classes="chord" FontWeight="Bold" Classes.active="False" Padding="0" VerticalAlignment="Center" HorizontalAlignment="Center" />
+
+  <DockPanel>
+
+    <!-- ── Header ─────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="16,12,16,10">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding Song}"
+                   FontSize="20" FontWeight="Bold" Foreground="White"
+                   TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding Artist}"
+                   FontSize="14" Foreground="#94a3b8"
+                   TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding TuningDisplay}"
+                   FontSize="12" Foreground="#7fc0f4"
+                   IsVisible="{Binding HasTuning}"
+                   Margin="0,4,0,0" />
+      </StackPanel>
     </Border>
-    <TextBlock Text=" Do you remember a guy that's been" TextWrapping="Wrap" />
-    <TextBlock Text="Em7" FontWeight="Bold" Classes="chord" Classes.active="True" />
-    <TextBlock Text="In such an early song" TextWrapping="Wrap" />
-  </StackPanel>
+
+    <!-- ── Chord strip ─────────────────────────────────────── -->
+    <Border DockPanel.Dock="Top"
+            Background="#0a0f1e"
+            Padding="12,8"
+            IsVisible="{Binding HasChords}">
+      <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Chords}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="chord-pill">
+                <TextBlock Text="{Binding Name}" />
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+
+    <!-- ── Tab content ────────────────────────────────────── -->
+    <Border DockPanel.Dock="Top" Height="1" Background="#1e293b" />
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Auto">
+      <ItemsControl ItemsSource="{Binding Lines}" Padding="16,14,16,24">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:TabLine">
+            <TextBlock Text="{Binding Text}"
+                       Foreground="{Binding ForegroundBrush}"
+                       FontFamily="Consolas,Courier New,monospace"
+                       FontSize="13"
+                       FontWeight="{Binding FontWeight}"
+                       MinHeight="{Binding MinHeight}"
+                       TextWrapping="NoWrap" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+  </DockPanel>
 </UserControl>

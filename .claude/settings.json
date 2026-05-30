@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(~/.dotnet/dotnet package search *)",
+      "Bash(~/.dotnet/dotnet build *)",
+      "Bash(~/.dotnet/dotnet test *)",
+      "Bash(timeout * ~/.dotnet/dotnet test *)",
+      "Bash(ls /tmp/jamseshun-ui*)",
+      "Bash(mkdir -p /tmp/jamseshun-ui*)"
+    ]
+  }
+}

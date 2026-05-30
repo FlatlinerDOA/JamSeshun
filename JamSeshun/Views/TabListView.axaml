@@ -5,60 +5,152 @@
              xmlns:vm="using:JamSeshun.ViewModels"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
              x:DataType="vm:TabListViewModel"
-             x:Class="JamSeshun.Views.TabListView">
+             x:Class="JamSeshun.Views.TabListView"
+             Background="#111827">
+
   <Design.DataContext>
     <vm:TabListViewModel />
   </Design.DataContext>
 
+  <UserControl.Styles>
+    <Style Selector="ListBoxItem">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#1e293b" />
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="#1e3a5f" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="#1e293b" />
+      <Setter Property="Foreground" Value="#e2e8f0" />
+      <Setter Property="BorderBrush" Value="#334155" />
+      <Setter Property="CaretBrush" Value="#7fc0f4" />
+    </Style>
+    <Style Selector="TextBox:focus">
+      <Setter Property="BorderBrush" Value="#7fc0f4" />
+    </Style>
+    <Style Selector="Button">
+      <Setter Property="Background" Value="#1e3a5f" />
+      <Setter Property="Foreground" Value="#7fc0f4" />
+      <Setter Property="BorderBrush" Value="#334155" />
+      <Setter Property="Padding" Value="14,8" />
+    </Style>
+    <Style Selector="Button:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2a4a7f" />
+    </Style>
+  </UserControl.Styles>
+
   <DockPanel>
-    <!-- Search bar -->
-    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="8,8,8,4">
-      <TextBox Grid.Column="0"
-               PlaceholderText="Search tabs..."
-               Text="{Binding SearchQuery}" />
-      <Button Grid.Column="1" Margin="4,0,0,0"
-              Command="{Binding SearchCommand}"
-              Content="Search" />
-    </Grid>
 
-    <!-- Loading indicator -->
-    <TextBlock DockPanel.Dock="Top"
-               Text="Searching..."
-               IsVisible="{Binding IsSearching}"
-               Margin="12,4" />
+    <!-- ── Search bar ──────────────────────────────────────── -->
+    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12,10">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBox Grid.Column="0"
+                 PlaceholderText="Search tabs..."
+                 Text="{Binding SearchQuery}"
+                 VerticalAlignment="Center" />
+        <Button Grid.Column="1" Margin="8,0,0,0"
+                Command="{Binding SearchCommand}"
+                Content="Search"
+                VerticalAlignment="Center" />
+      </Grid>
+    </Border>
 
-    <!-- Results (shown when search has results) -->
+    <!-- ── Loading ────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Top"
+            Background="#0f172a"
+            Padding="16,6"
+            IsVisible="{Binding IsSearching}">
+      <TextBlock Text="Searching..."
+                 Foreground="#94a3b8"
+                 FontSize="13" />
+    </Border>
+
+    <!-- ── Results ────────────────────────────────────────── -->
     <StackPanel DockPanel.Dock="Top"
                 IsVisible="{Binding HasSearchResults}">
-      <TextBlock Text="Results" Margin="12,8,12,4" FontWeight="SemiBold" />
+
+      <TextBlock Text="RESULTS"
+                 Margin="16,14,16,6"
+                 FontSize="11"
+                 FontWeight="SemiBold"
+                 Foreground="#64748b" />
+
       <ListBox ItemsSource="{Binding SearchResults}"
-               SelectedItem="{Binding SelectedTabReference}">
+               SelectedItem="{Binding SelectedTabReference}"
+               Background="Transparent"
+               BorderThickness="0">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:TabReferenceViewModel">
-            <StackPanel Margin="4,2">
-              <TextBlock Text="{Binding Artist}" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding Song}" />
-              <TextBlock Text="{Binding Summary}" FontSize="11" Opacity="0.6" />
-            </StackPanel>
+            <Border Padding="16,10" BorderBrush="#1e293b" BorderThickness="0,0,0,1">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="2">
+                  <TextBlock Text="{Binding Artist}"
+                             Foreground="#e2e8f0"
+                             FontWeight="SemiBold"
+                             FontSize="14" />
+                  <TextBlock Text="{Binding Song}"
+                             Foreground="#94a3b8"
+                             FontSize="13" />
+                  <TextBlock Text="{Binding Summary}"
+                             Foreground="#475569"
+                             FontSize="11"
+                             Margin="0,2,0,0" />
+                </StackPanel>
+                <TextBlock Grid.Column="1"
+                           Text="›"
+                           Foreground="#475569"
+                           FontSize="20"
+                           VerticalAlignment="Center"
+                           Margin="8,0,0,0" />
+              </Grid>
+            </Border>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
     </StackPanel>
 
-    <!-- Favorites (shown when no search results) -->
+    <!-- ── Favorites ──────────────────────────────────────── -->
     <StackPanel IsVisible="{Binding !HasSearchResults}">
-      <TextBlock Text="Favorites" Margin="12,8,12,4" FontWeight="SemiBold" />
+
+      <TextBlock Text="FAVORITES"
+                 Margin="16,14,16,6"
+                 FontSize="11"
+                 FontWeight="SemiBold"
+                 Foreground="#64748b" />
+
       <ListBox ItemsSource="{Binding Favorites}"
-               SelectedItem="{Binding SelectedTabReference}">
+               SelectedItem="{Binding SelectedTabReference}"
+               Background="Transparent"
+               BorderThickness="0">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:TabReferenceViewModel">
-            <StackPanel Margin="4,2">
-              <TextBlock Text="{Binding Artist}" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding Song}" />
-            </StackPanel>
+            <Border Padding="16,12" BorderBrush="#1e293b" BorderThickness="0,0,0,1">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="2">
+                  <TextBlock Text="{Binding Artist}"
+                             Foreground="#e2e8f0"
+                             FontWeight="SemiBold"
+                             FontSize="14" />
+                  <TextBlock Text="{Binding Song}"
+                             Foreground="#94a3b8"
+                             FontSize="13" />
+                </StackPanel>
+                <TextBlock Grid.Column="1"
+                           Text="›"
+                           Foreground="#475569"
+                           FontSize="20"
+                           VerticalAlignment="Center"
+                           Margin="8,0,0,0" />
+              </Grid>
+            </Border>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
     </StackPanel>
+
   </DockPanel>
 </UserControl>

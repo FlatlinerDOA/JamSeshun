@@ -48,7 +48,7 @@ dotnet build JamSeshun.Android
 
 **Pitch detection pipeline:**
 1. `ITuningService` (platform-specific) provides `IObservable<DetectedPitch>` from the microphone
-2. `FftPitchDetector` applies FFT (`FftAlgorithm`) to find the fundamental frequency via harmonic peak analysis
+2. `AutoCorrelationPitchDetector` finds the fundamental frequency via time-domain autocorrelation (robust at guitar's low frequencies where FFT bin width exceeds a semitone; locks onto the fundamental period even when harmonics dominate). `FftAlgorithm` remains for spectrogram rendering only
 3. `TunerViewModel` subscribes, buffers over 300ms windows, and exposes `CurrentNote`, `CurrentFrequency`, `CurrentErrorInCents`
 4. `TunerView` / `TunerNeedle` render the result
 

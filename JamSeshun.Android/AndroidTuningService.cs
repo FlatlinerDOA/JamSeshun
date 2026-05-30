@@ -29,7 +29,7 @@ internal partial class AndroidTuningService : ITuningService
             return scheduler.ScheduleAsync<int>(device.Id, async (scheduler, c, id) =>
             {
                 var s = new AudioStream();
-                var pitchDetector = new FftPitchDetector(s.SampleRate);
+                var pitchDetector = new AutoCorrelationPitchDetector(s.SampleRate);
                 var sampleBuffer = ArrayPool<float>.Shared.Rent(pitchDetector.SampleBufferSize);
                 var targetMemory = sampleBuffer.AsMemory();
 

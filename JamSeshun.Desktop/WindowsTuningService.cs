@@ -1,10 +1,8 @@
-﻿using Avalonia.Controls.Shapes;
 using JamSeshun.Services.Tuning;
 using NAudio.Wave;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.IO;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -17,11 +15,11 @@ internal class WindowsTuningService : ITuningService
     {
         var devices = new AudioCaptureDevice[WaveInEvent.DeviceCount];
         for (int i = 0; i < devices.Length; i++)
-        {            
+        {
             var cap = WaveInEvent.GetCapabilities(i);
             devices[i] = new AudioCaptureDevice(i, cap.ProductName, i == 0);
         }
-        
+
         return Observable.Return(devices);
     }
 
@@ -30,60 +28,59 @@ internal class WindowsTuningService : ITuningService
         return Observable.Create<DetectedPitch>(observer =>
         {
             IScheduler scheduler = Scheduler.CurrentThread;
-            return scheduler.Schedule<int>(device.Id, (scheduler, id) =>
+            return scheduler.Schedule<int>(device.Id, (_, id) =>
             {
-                WaveInEvent waveIn = new WaveInEvent();
-                waveIn.DeviceNumber = id;
-                waveIn.WaveFormat = new WaveFormat(44100, 1);
+                var waveIn = new WaveInEvent
+                {
+                    DeviceNumber = id,
+                    WaveFormat = new WaveFormat(44100, 1)
+                };
 
-                BufferedWaveProvider bufferedWaveProvider = new BufferedWaveProvider(waveIn.WaveFormat);
-                IWaveProvider waveProvider = new Wave16ToFloatProvider(bufferedWaveProvider);
-                ////var pitchDetector = new BitStreamAutoCorrelatedPitchDetector(waveProvider.WaveFormat.SampleRate);
-                var pitchDetector = new FftPitchDetector(waveProvider.WaveFormat.SampleRate);
-                var sampleProvider = waveProvider.ToSampleProvider();
-                var f = new FileStream(@"C:\Temp\raw.pcm", FileMode.Create);
+                var buffered = new BufferedWaveProvider(waveIn.WaveFormat)
+                {
+                    DiscardOnBufferOverflow = true
+                };
+                var pitchDetector = new AutoCorrelationPitchDetector(waveIn.WaveFormat.SampleRate);
+                var sampleProvider = new Wave16ToFloatProvider(buffered).ToSampleProvider();
+                var bytesPerSample = waveIn.WaveFormat.BitsPerSample / 8;
+
                 var bufferReady = Observable.FromEventPattern<WaveInEventArgs>(
                     h => waveIn.DataAvailable += h,
                     h => waveIn.DataAvailable -= h);
+
                 var d = new CompositeDisposable
                 {
                     bufferReady.Subscribe(e =>
                     {
-                        if (bufferedWaveProvider != null)
+                        buffered.AddSamples(e.EventArgs.Buffer, 0, e.EventArgs.BytesRecorded);
+
+                        // Only process when we have exactly the required number of samples.
+                        // This ensures consistent FFT resolution on every call.
+                        var samplesAvailable = buffered.BufferedBytes / bytesPerSample;
+                        if (samplesAvailable < pitchDetector.SampleBufferSize) return;
+
+                        var sampleBuffer = ArrayPool<float>.Shared.Rent(pitchDetector.SampleBufferSize);
+                        try
                         {
-                            bufferedWaveProvider.AddSamples(e.EventArgs.Buffer, 0, e.EventArgs.BytesRecorded);
-                            bufferedWaveProvider.DiscardOnBufferOverflow = false; ////true;
-                            f.Write(e.EventArgs.Buffer, 0, e.EventArgs.BytesRecorded);
-                            var samplesRecorded = bufferedWaveProvider.BufferedBytes / (waveIn.WaveFormat.BitsPerSample / 8);
-                            var sampleBuffer = ArrayPool<float>.Shared.Rent(samplesRecorded);
-                            var samplesRead = sampleProvider.Read(sampleBuffer, 0, samplesRecorded);
-                            var detected = pitchDetector.DetectPitch(sampleBuffer.AsMemory().Span.Slice(0, samplesRead));
-                            ArrayPool<float>.Shared.Return(sampleBuffer, true);
+                            var samplesRead = sampleProvider.Read(sampleBuffer, 0, pitchDetector.SampleBufferSize);
+                            if (samplesRead != pitchDetector.SampleBufferSize) return;
+
+                            var detected = pitchDetector.DetectPitch(sampleBuffer.AsSpan(0, samplesRead));
                             if (detected.Fundamental.Name != null)
-                            {
                                 observer.OnNext(detected);
-                            }
+                        }
+                        finally
+                        {
+                            ArrayPool<float>.Shared.Return(sampleBuffer, true);
                         }
                     }),
-                    Disposable.Create(() =>
-                    {
-                        // stop recording
-                        waveIn.StopRecording();
-                        f.Flush();
-                        f.Close();
-                        using var fs = File.OpenRead(@"C:\Temp\raw.pcm");
-                        var s = new RawSourceWaveStream(fs, waveIn.WaveFormat);
-                        var outpath = @"C:\Temp\raw.wav";
-                        WaveFileWriter.CreateWaveFile(outpath, s);
-                    }),
+                    Disposable.Create(waveIn.StopRecording),
                     waveIn
                 };
 
-                // begin record
                 waveIn.StartRecording();
                 return d;
             });
         });
     }
-
 }

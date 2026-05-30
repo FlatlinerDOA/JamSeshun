@@ -50,11 +50,12 @@ public static class FftAlgorithm
             //data[i] = Complex.Zero;
         }
 
-        // bit reversal
+        // bit reversal + Hanning window to reduce spectral leakage
         for (int i = 0; i < samples.Length; i++)
         {
             int j = ReverseBits(i, bitsInLength);
-            data[j] = new Complex((double)samples[i], 0);
+            double window = 0.5 * (1.0 - Math.Cos(2.0 * Math.PI * i / (samples.Length - 1)));
+            data[j] = new Complex((double)samples[i] * window, 0);
         }
 
 

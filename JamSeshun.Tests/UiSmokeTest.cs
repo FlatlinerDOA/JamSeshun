@@ -29,8 +29,13 @@ public class UiSmokeTest
     [AvaloniaFact]
     public void TunerView_ShouldRender()
     {
-        var window = new Window { Width = 800, Height = 600 };
-        window.Content = new TunerView();
+        var window = new Window { Width = 400, Height = 700 };
+        var vm = new TunerViewModel();
+        vm.CurrentNote = "A";
+        vm.CurrentFrequency = 438.2f;
+        vm.CurrentErrorInCents = -8.5f;
+        vm.CurrentErrorInDegrees = -9.4f; // slightly flat
+        window.Content = new TunerView { DataContext = vm };
         window.Show();
 
         var frame = window.CaptureRenderedFrame();

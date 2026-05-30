@@ -4,21 +4,59 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:JamSeshun.ViewModels"
              xmlns:views="using:JamSeshun.Views"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
              x:DataType="vm:TunerViewModel"
-             x:Class="JamSeshun.Views.TunerView">
+             x:Class="JamSeshun.Views.TunerView"
+             Background="#111827">
+
   <Design.DataContext>
     <vm:TunerViewModel />
   </Design.DataContext>
-  <Grid>
-    <StackPanel HorizontalAlignment="Center">
-      <TextBlock Text="{Binding CurrentNote}" FontSize="20" />
-      <TextBlock Text="{Binding CurrentFrequency}" FontSize="20" />
-      <TextBlock Text="{Binding CurrentErrorInCents}" FontSize="20" />
-      <Button Command="{Binding StartCommand}">Start</Button>
-      <views:TunerNeedle Angle="{Binding CurrentErrorInDegrees}" Width="200" Height="200" />
-      <!--views:Spectrogram LatestSample="{Binding LastSample}" />-->
-      <Rectangle Width="10" Height="20" />
-    </StackPanel>
-  </Grid>
+
+  <UserControl.Styles>
+    <Style Selector="Button.start-btn">
+      <Setter Property="Background" Value="#1e3a5f" />
+      <Setter Property="Foreground" Value="#7fc0f4" />
+      <Setter Property="BorderBrush" Value="#334155" />
+      <Setter Property="Padding" Value="40,14" />
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.start-btn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2a4a7f" />
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+
+    <!-- ── Note display ───────────────────────────────────── -->
+    <Border DockPanel.Dock="Top" Padding="0,28,0,0">
+      <StackPanel HorizontalAlignment="Center" Spacing="4">
+        <TextBlock Text="{Binding NoteDisplay}"
+                   FontSize="80" FontWeight="Bold" Foreground="White"
+                   HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding FrequencyDisplay}"
+                   FontSize="18" Foreground="#94a3b8"
+                   HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding ErrorDisplay}"
+                   FontSize="13" Foreground="#64748b"
+                   HorizontalAlignment="Center"
+                   MinHeight="18" />
+      </StackPanel>
+    </Border>
+
+    <!-- ── Start/Stop button ──────────────────────────────── -->
+    <Border DockPanel.Dock="Bottom" Padding="0,20,0,28">
+      <Button Classes="start-btn"
+              Command="{Binding StartCommand}"
+              Content="{Binding StartButtonText}"
+              HorizontalAlignment="Center" />
+    </Border>
+
+    <!-- ── Gauge (fills remaining space) ─────────────────── -->
+    <views:TunerNeedle Angle="{Binding CurrentErrorInDegrees}"
+                       HorizontalAlignment="Stretch"
+                       VerticalAlignment="Stretch" />
+
+  </DockPanel>
 </UserControl>

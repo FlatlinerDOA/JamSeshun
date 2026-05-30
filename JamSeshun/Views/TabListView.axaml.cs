@@ -36,7 +36,9 @@ public partial class TabListView : UserControl
         var navPage = this.FindAncestorOfType<NavigationPage>();
         if (navPage == null) return;
 
-        var tabView = new TabView();
+        // Set DataContext immediately so compiled bindings never inherit MainViewModel
+        var vm = new TabViewModel();
+        var tabView = new TabView { DataContext = vm };
         var contentPage = new ContentPage
         {
             Header = $"{tabRef.Artist} — {tabRef.Song}",

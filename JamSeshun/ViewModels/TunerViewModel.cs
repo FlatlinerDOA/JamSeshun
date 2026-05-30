@@ -29,6 +29,8 @@ public sealed class TunerViewModel : ViewModelBase
         if (this.recordingSession != null)
         {
             this.recordingSession.Dispose();
+            this.recordingSession = null;
+            IsRunning = false;
             return;
         }
 
@@ -45,34 +47,47 @@ public sealed class TunerViewModel : ViewModelBase
             this.CurrentNote = x.Fundamental.ToString();
             this.CurrentFrequency = x.EstimatedFrequency;
             this.CurrentErrorInCents = x.ErrorInCents;
-            this.CurrentErrorInDegrees = (360f + x.ErrorInCents) % 360f; // * (Math.PI ^ 2d * 45d);
+            // Map ±50 cents to ±55° from vertical for the gauge needle
+            this.CurrentErrorInDegrees = (float)(Math.Max(-50, Math.Min(50, x.ErrorInCents)) / 50.0 * 55.0);
         });
+        IsRunning = true;
     }
 
     public float CurrentFrequency
     {
-        get => this.currentFrequency;
-        set => this.SetProperty(ref this.currentFrequency, value);
+        get => currentFrequency;
+        set { SetProperty(ref currentFrequency, value); OnPropertyChanged(nameof(FrequencyDisplay)); }
     }
-
 
     public float CurrentErrorInCents
     {
-        get => this.currentErrorInCents;
-        set => this.SetProperty(ref this.currentErrorInCents, value);
+        get => currentErrorInCents;
+        set { SetProperty(ref currentErrorInCents, value); OnPropertyChanged(nameof(ErrorDisplay)); }
     }
 
     public float CurrentErrorInDegrees
     {
-        get => this.currentErrorInDegrees;
-        set => this.SetProperty(ref this.currentErrorInDegrees, value);
+        get => currentErrorInDegrees;
+        set => SetProperty(ref currentErrorInDegrees, value);
     }
 
     public string CurrentNote
     {
-        get { return currentNote; }
-        set { this.SetProperty(ref currentNote, value); }
+        get => currentNote;
+        set { SetProperty(ref currentNote, value); OnPropertyChanged(nameof(NoteDisplay)); }
     }
+
+    private bool isRunning;
+    public bool IsRunning
+    {
+        get => isRunning;
+        private set { SetProperty(ref isRunning, value); OnPropertyChanged(nameof(StartButtonText)); }
+    }
+
+    public string NoteDisplay => string.IsNullOrEmpty(currentNote) ? "–" : currentNote;
+    public string FrequencyDisplay => currentFrequency > 0 ? $"{currentFrequency:F1} Hz" : "– Hz";
+    public string ErrorDisplay => currentErrorInCents != 0 ? $"{currentErrorInCents:+0.0;-0.0;0} cents" : string.Empty;
+    public string StartButtonText => isRunning ? "Stop" : "Start Tuning";
 
     public RelayCommand StartCommand { get; }
 }

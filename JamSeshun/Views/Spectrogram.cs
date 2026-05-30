@@ -25,7 +25,6 @@ public class Spectrogram : Canvas
     {
     }
 
-    private int currentOffset = 0;
     public void AddBuffer(ReadOnlyMemory<double> memory)
     {
         ////memory.Slice(this.cu).CopyTo(memory.sl)
@@ -33,7 +32,7 @@ public class Spectrogram : Canvas
         this.InvalidateVisual();
     }
 
-    public double[] LatestPcmSample { get; set; }
+    public double[] LatestPcmSample { get; set; } = [];
 
     public void RenderSpectrogram(Canvas canvas, double[,] spectrogramData)
     {

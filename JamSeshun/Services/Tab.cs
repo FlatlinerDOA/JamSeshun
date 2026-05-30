@@ -1,6 +1,6 @@
 ﻿namespace JamSeshun.Services;
 
-public record Tab(TabReference Name, GuitarTuning Tuning, string WikiTab, IReadOnlyList<Chord> Chords)
+public record Tab(TabReference Name, GuitarTuning Tuning, string? WikiTab, IReadOnlyList<Chord> Chords)
 {
     public string ChordSummary => this.Chords.Any() ? $"Chords:\n{string.Join('\n', this.Chords)}" : string.Empty;
 

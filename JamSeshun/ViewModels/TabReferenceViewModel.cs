@@ -5,7 +5,7 @@ namespace JamSeshun.ViewModels;
 public class TabReferenceViewModel : ViewModelBase
 {
     public TabReferenceViewModel()
-        : this(new TabReference("Lorem Ipsum", "Dolor Set", 1, "Tab", 1, 0.9m, null)) { }
+        : this(new TabReference("Lorem Ipsum", "Dolor Set", 1, "Tab", 1, 0.9m, (string?)null)) { }
 
     public TabReferenceViewModel(TabReference tabReference)
     {

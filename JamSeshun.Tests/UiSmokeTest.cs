@@ -65,7 +65,7 @@ public class UiSmokeTest
     public void TabView_ShouldRender()
     {
         var sampleTab = new Tab(
-            Name: new TabReference("Oasis", "Wonderwall", 4, "Tab", 12403, 4.8m, null),
+            Name: new TabReference("Oasis", "Wonderwall", 4, "Tab", 12403, 4.8m, (string?)null),
             Tuning: new GuitarTuning("Standard", "EADGBe", 0),
             WikiTab: SampleWikiTab,
             Chords:

@@ -2,7 +2,7 @@
 
 namespace JamSeshun.Services;
 
-public record TabReference(string Artist, string Song, int Version, string Type, int Votes, decimal Rating, string Url)
+public record TabReference(string Artist, string Song, int Version, string? Type, int Votes, decimal Rating, string? Url)
 {
     public decimal Score => (decimal)(Math.Sqrt((double)this.Votes) * (double)this.Rating);
     public string FileName => SafeFileName($"{this.Artist} - {this.Song} V{this.Version}.{this.Type}.txt");

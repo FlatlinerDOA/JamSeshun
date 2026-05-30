@@ -6,7 +6,7 @@ namespace JamSeshun.ViewModels;
 
 public partial class TabListViewModel : ViewModelBase
 {
-    private readonly GuitarTabsService tabsService;
+    private readonly GuitarTabsService? tabsService;
     private string searchQuery = string.Empty;
     private bool isSearching;
     private TabReferenceViewModel? selectedTabReference;
@@ -15,8 +15,8 @@ public partial class TabListViewModel : ViewModelBase
     {
         SearchCommand = new AsyncRelayCommand(SearchAsync);
         SearchResults.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasSearchResults));
-        Favorites.Add(new(new TabReference("Frank Sinatra", "Come Fly With Me", 1, "Tab", 100, 0.5m, null)));
-        Favorites.Add(new(new TabReference("The Beatles", "Come Together", 1, "Tab", 1400, 0.7m, null)));
+        Favorites.Add(new(new TabReference("Frank Sinatra", "Come Fly With Me", 1, "Tab", 100, 0.5m, (string?)null)));
+        Favorites.Add(new(new TabReference("The Beatles", "Come Together", 1, "Tab", 1400, 0.7m, (string?)null)));
     }
 
     public TabListViewModel(GuitarTabsService tabsService) : this()

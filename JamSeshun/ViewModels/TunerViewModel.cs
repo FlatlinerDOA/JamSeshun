@@ -7,11 +7,11 @@ namespace JamSeshun.ViewModels;
 
 public sealed class TunerViewModel : ViewModelBase
 {
-    private readonly ITuningService tuningService;
+    private readonly ITuningService? tuningService;
     private float currentFrequency;
     private float currentErrorInCents;
     private float currentErrorInDegrees;
-    private string currentNote;
+    private string currentNote = string.Empty;
 
     public TunerViewModel()
     {
@@ -23,7 +23,7 @@ public sealed class TunerViewModel : ViewModelBase
         this.tuningService = tuningService;
     }
 
-    private IDisposable recordingSession;
+    private IDisposable? recordingSession;
     private void Start()
     {
         if (this.recordingSession != null)
@@ -33,6 +33,8 @@ public sealed class TunerViewModel : ViewModelBase
             IsRunning = false;
             return;
         }
+
+        if (this.tuningService == null) return;
 
         var q = from audioDeviceList in this.tuningService.GetAudioCaptureDevices()
                 let audioDevice = audioDeviceList.FirstOrDefault(f => f.IsDefault) ?? audioDeviceList.FirstOrDefault(f => f.Name.Contains("Yeti"))

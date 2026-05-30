@@ -7,7 +7,8 @@ namespace JamSeshun.Services;
 
 public sealed class GuitarTabsService
 {
-    public async Task<Tab> GetTabAsync(TabReference tabReference) => await DownloadTabAsync(tabReference.Url);
+    public async Task<Tab?> GetTabAsync(TabReference tabReference) =>
+        tabReference.Url != null ? await DownloadTabAsync(tabReference.Url) : null;
 
     private const string HtmlCodeTable = @""" &quot;
 & &amp;
@@ -209,8 +210,8 @@ public sealed class GuitarTabsService
 
             moreToDownload = pageCount > 1 && currentPage < pageCount && currentPage == pageToLoad;
             var urls = from result in results
-                       let artist = (string?)result["artist_name"]
-                       let song = (string?)result["song_name"]
+                       let artist = (string?)result["artist_name"] ?? string.Empty
+                       let song = (string?)result["song_name"] ?? string.Empty
                        let rating = (decimal?)result["rating"] ?? 0m
                        let url = (string?)result["tab_url"]
                        let version = (int?)result["version"] ?? 0
@@ -257,7 +258,11 @@ public sealed class GuitarTabsService
         var chords = from key in ((JObject?)data?["tab_view"]?["applicature"])?.Properties() ?? Array.Empty<JProperty>()
                      let item = ((JArray)key.Value).FirstOrDefault()
                      where item != null
-                     select new Chord(key.Name, (string)item["id"], (string)item["type"], ((JArray)item["frets"]).Select(r => (int)r).ToArray(), ((JArray)item["fingers"]).Select(r => (int)r).ToArray());
+                     let frets = (JArray?)item["frets"]
+                     let fingers = (JArray?)item["fingers"]
+                     where frets != null && fingers != null
+                     select new Chord(key.Name, (string?)item["id"] ?? string.Empty, (string?)item["type"] ?? string.Empty,
+                         frets.Select(r => (int)r).ToArray(), fingers.Select(r => (int)r).ToArray());
         return new Tab(name, tuning, content, chords.ToList());
     }
 
@@ -267,7 +272,7 @@ public sealed class GuitarTabsService
         doc.LoadHtml(html);
         var js = doc.DocumentNode.Descendants("div").FirstOrDefault(dn => dn.GetAttributeValue("class", string.Empty) == "js-store")?.GetAttributeValue("data-content", string.Empty);
         js = ReplaceHtmlCodes(js);
-        var root = JsonConvert.DeserializeObject(js) as JObject;
+        var root = js != null ? JsonConvert.DeserializeObject(js) as JObject : null;
         return root;
     }
 

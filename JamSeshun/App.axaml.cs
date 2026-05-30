@@ -8,7 +8,7 @@ namespace JamSeshun;
 
 public partial class App : Application
 {
-    public static IServiceProvider ServiceProvider { get; internal set; }
+    public static IServiceProvider ServiceProvider { get; internal set; } = null!;
 
     public override void Initialize()
     {

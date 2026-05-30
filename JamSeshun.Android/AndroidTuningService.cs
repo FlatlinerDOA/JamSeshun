@@ -31,30 +31,29 @@ internal partial class AndroidTuningService : ITuningService
                 var s = new AudioStream();
                 var pitchDetector = new AutoCorrelationPitchDetector(s.SampleRate);
                 var sampleBuffer = ArrayPool<float>.Shared.Rent(pitchDetector.SampleBufferSize);
-                var targetMemory = sampleBuffer.AsMemory();
+                int writeIndex = 0;
 
                 var d = new CompositeDisposable
                 {
+                    Disposable.Create(() => ArrayPool<float>.Shared.Return(sampleBuffer, true)),
                     s.AudioBuffers.Subscribe(audioBuffer =>
                     {
-                        var bytesPerSample = s.BitsPerSample / 8;
-                        var samplesRead = audioBuffer.Length / bytesPerSample;
+                        const int bytesPerSample = 2; // PCM16 = 2 bytes per sample
                         var byteSpan = audioBuffer.Span;
-                        for (var i = 0; i < Math.Min(samplesRead, targetMemory.Length); i += bytesPerSample)
-                        {
-                            targetMemory.Span[i] = (float)BitConverter.ToHalf(byteSpan[..bytesPerSample]);
-                            byteSpan = byteSpan[bytesPerSample..];
-                            targetMemory = targetMemory[i..];
-                        }
+                        int byteOffset = 0;
 
-                        if (targetMemory.Length <= bytesPerSample)
+                        while (byteOffset + bytesPerSample <= byteSpan.Length)
                         {
-                            var detected = pitchDetector.DetectPitch(sampleBuffer.AsMemory().Span);
-                            ArrayPool<float>.Shared.Return(sampleBuffer, true);
-                            sampleBuffer = ArrayPool<float>.Shared.Rent(pitchDetector.SampleBufferSize);
-                            // Emit every frame so the UI can show live signal level;
-                            // the view model filters to pitched frames for the note.
-                            observer.OnNext(detected);
+                            // PCM16 is a signed int16, normalize to [-1, 1]
+                            sampleBuffer[writeIndex++] = BitConverter.ToInt16(byteSpan[byteOffset..]) / 32768f;
+                            byteOffset += bytesPerSample;
+
+                            if (writeIndex >= pitchDetector.SampleBufferSize)
+                            {
+                                var detected = pitchDetector.DetectPitch(sampleBuffer.AsSpan(0, pitchDetector.SampleBufferSize));
+                                observer.OnNext(detected);
+                                writeIndex = 0;
+                            }
                         }
                     })
                 };

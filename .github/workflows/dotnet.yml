@@ -8,27 +8,22 @@ on:
 
 jobs:
   build:
-    # iOS is excluded — it requires a specific Xcode version not yet stable on runners
-    runs-on: ubuntu-latest
+    runs-on: macos-26
     steps:
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1.6.0
+      with:
+        xcode-version: '26.5'
     - uses: actions/checkout@v4
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 10.0.x
     - name: Restore workloads
-      run: dotnet workload restore JamSeshun.Android/JamSeshun.Android.csproj
+      run: dotnet workload restore
     - name: Restore dependencies
-      run: |
-        dotnet restore JamSeshun/JamSeshun.csproj
-        dotnet restore JamSeshun.Desktop/JamSeshun.Desktop.csproj
-        dotnet restore JamSeshun.Android/JamSeshun.Android.csproj
-        dotnet restore JamSeshun.Tests/JamSeshun.Tests.csproj
+      run: dotnet restore
     - name: Build
-      run: |
-        dotnet build JamSeshun/JamSeshun.csproj --no-restore
-        dotnet build JamSeshun.Desktop/JamSeshun.Desktop.csproj --no-restore
-        dotnet build JamSeshun.Android/JamSeshun.Android.csproj --no-restore
-        dotnet build JamSeshun.Tests/JamSeshun.Tests.csproj --no-restore
+      run: dotnet build --no-restore
     - name: Test
       run: dotnet test JamSeshun.Tests/JamSeshun.Tests.csproj --no-build --verbosity normal

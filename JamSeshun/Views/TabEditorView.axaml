@@ -92,6 +92,25 @@
       </Grid>
     </Border>
 
+    <!-- ── Import progress ───────────────────────────────────── -->
+    <Border DockPanel.Dock="Bottom"
+            Background="#0a0f1e"
+            Padding="12,8"
+            IsVisible="{Binding IsImporting}">
+      <StackPanel Spacing="4">
+        <ProgressBar Minimum="0"
+                     Maximum="{Binding ImportTotal}"
+                     Value="{Binding ImportCurrent}"
+                     Foreground="#7fc0f4"
+                     Background="#1e293b"
+                     Height="4" />
+        <TextBlock Text="{Binding ImportProgressText}"
+                   Foreground="#64748b"
+                   FontSize="11"
+                   HorizontalAlignment="Center" />
+      </StackPanel>
+    </Border>
+
     <!-- ── Bottom bar ─────────────────────────────────────── -->
     <Border DockPanel.Dock="Bottom" Background="#0f172a" Padding="12,10">
       <Grid ColumnDefinitions="*,Auto,Auto,Auto">
@@ -104,11 +123,13 @@
         <Button Grid.Column="1"
                 Classes="clear-btn"
                 x:Name="ImportButton"
+                IsEnabled="{Binding CanInteract}"
                 Content="Import…"
                 Margin="0,0,8,0" />
         <Button Grid.Column="2"
                 Classes="clear-btn"
                 Command="{Binding ClearCommand}"
+                IsEnabled="{Binding CanInteract}"
                 Content="New"
                 Margin="0,0,8,0" />
         <Button Grid.Column="3"

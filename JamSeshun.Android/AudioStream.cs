@@ -22,7 +22,7 @@ internal class AudioStream
     /// <summary>
     /// The audio source.
     /// </summary>
-    AudioRecord? audioSource;
+    private AudioRecord? audioSource;
 
     /// <summary>
     /// Occurs when new audio has been streamed.
@@ -71,7 +71,7 @@ internal class AudioStream
     /// </summary>
     public bool IsActive => this.audioSource?.RecordingState == RecordState.Recording;
 
-    void Init()
+    private void Init()
     {
         this.Stop(); // just in case
 
@@ -116,7 +116,7 @@ internal class AudioStream
                 this.audioSource.StartRecording();
 
                 this.isActiveChanges.OnNext(true);
-                Task.Run(() => this.Record());
+                _ = Task.Run(this.RecordAsync);
             }
 
             return;
@@ -176,7 +176,7 @@ internal class AudioStream
     /// <summary>
     /// Record from the microphone and broadcast the buffer.
     /// </summary>
-    async Task Record()
+    private async Task RecordAsync()
     {
         byte[] data = new byte[this.bufferSize];
         int readFailureCount = 0;

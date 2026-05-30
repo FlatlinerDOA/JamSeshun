@@ -13,6 +13,10 @@ public class TabEditorViewModel : ViewModelBase
     private string tuning = string.Empty;
     private int capo;
     private string savedMessage = string.Empty;
+    private bool isImporting;
+    private int importCurrent;
+    private int importTotal;
+    private int importSaved;
 
     public TabEditorViewModel()
     {
@@ -63,26 +67,83 @@ public class TabEditorViewModel : ViewModelBase
 
     public bool HasSavedMessage => !string.IsNullOrEmpty(savedMessage);
 
+    public bool IsImporting
+    {
+        get => isImporting;
+        private set
+        {
+            SetProperty(ref isImporting, value);
+            OnPropertyChanged(nameof(CanInteract));
+            SaveCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    public int ImportCurrent
+    {
+        get => importCurrent;
+        private set { SetProperty(ref importCurrent, value); OnPropertyChanged(nameof(ImportProgressText)); }
+    }
+
+    public int ImportTotal
+    {
+        get => importTotal;
+        private set { SetProperty(ref importTotal, value); OnPropertyChanged(nameof(ImportProgressText)); }
+    }
+
+    public string ImportProgressText => $"{importCurrent} / {importTotal}";
+
+    public bool CanInteract => !isImporting;
+
     public RelayCommand SaveCommand { get; }
     public RelayCommand ClearCommand { get; }
 
-    /// <summary>
-    /// Imports a batch of files parsed by WikiTabParser. Returns the number successfully imported.
-    /// </summary>
-    public int ImportFiles(IEnumerable<(string FileName, string Content)> files)
+    public void BeginImport(int total)
     {
-        if (_library == null) return 0;
-        var count = 0;
-        foreach (var (fileName, content) in files)
+        ImportTotal = total;
+        ImportCurrent = 0;
+        importSaved = 0;
+        SavedMessage = string.Empty;
+        IsImporting = true;
+    }
+
+    /// <summary>
+    /// Parse and save one file on a background thread.
+    /// Returns false if the file was skipped (duplicate or unrecognised filename).
+    /// </summary>
+    public async Task<bool> ImportOneAsync(string fileName, string content)
+    {
+        if (_library == null) return false;
+
+        var saved = await Task.Run(() =>
         {
             var tab = WikiTabParser.Parse(fileName, content);
-            if (tab == null) continue;
-            _library.Save(Guid.NewGuid(), $"{tab.Artist} - {tab.Song}", tab);
-            count++;
-        }
-        if (count > 0)
-            SavedMessage = $"Imported {count} tab{(count == 1 ? "" : "s")}";
-        return count;
+            if (tab == null) return false;
+
+            var version = WikiTabParser.ParseVersion(fileName);
+            var name    = WikiTabParser.StoreKey(tab.Artist, tab.Song, version);
+
+            if (_library.NameExists(name)) return false;
+
+            _library.Save(Guid.NewGuid(), name, tab);
+            return true;
+        });
+
+        ImportCurrent++;
+        if (saved) importSaved++;
+        return saved;
+    }
+
+    public void EndImport()
+    {
+        IsImporting = false;
+        var skipped = importCurrent - importSaved;
+        SavedMessage = importSaved > 0
+            ? skipped > 0
+                ? $"Imported {importSaved}, skipped {skipped} duplicate{(skipped == 1 ? "" : "s")}"
+                : $"Imported {importSaved} tab{(importSaved == 1 ? "" : "s")}"
+            : importCurrent > 0
+                ? "All files already imported"
+                : "No valid tabs found";
     }
 
     public void LoadForEdit(Guid id, SavedTab tab)
@@ -97,7 +158,7 @@ public class TabEditorViewModel : ViewModelBase
     }
 
     private bool CanSave() =>
-        !string.IsNullOrWhiteSpace(artist) && !string.IsNullOrWhiteSpace(song);
+        !isImporting && !string.IsNullOrWhiteSpace(artist) && !string.IsNullOrWhiteSpace(song);
 
     private void Save()
     {

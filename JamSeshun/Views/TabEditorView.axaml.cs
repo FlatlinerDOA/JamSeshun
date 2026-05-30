@@ -35,14 +35,21 @@ public partial class TabEditorView : UserControl
 
         if (files.Count == 0) return;
 
-        var parsed = new List<(string FileName, string Content)>(files.Count);
-        foreach (var file in files)
+        vm.BeginImport(files.Count);
+        try
         {
-            await using var stream = await file.OpenReadAsync();
-            using var reader = new StreamReader(stream);
-            parsed.Add((file.Name, await reader.ReadToEndAsync()));
+            foreach (var file in files)
+            {
+                string content;
+                await using var stream = await file.OpenReadAsync();
+                using var reader = new StreamReader(stream);
+                content = await reader.ReadToEndAsync();
+                await vm.ImportOneAsync(file.Name, content);
+            }
         }
-
-        vm.ImportFiles(parsed);
+        finally
+        {
+            vm.EndImport();
+        }
     }
 }

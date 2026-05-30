@@ -37,6 +37,17 @@ public static class WikiTabParser
         return new SavedTab(artist, song, content, tuning, capo, DateTimeOffset.Now);
     }
 
+    /// <summary>Returns the version number from the filename (e.g. "Song V3.Chords.txt" → 3), or 1 if absent.</summary>
+    public static int ParseVersion(string fileName)
+    {
+        var m = FilenameRegex.Match(fileName);
+        return m.Success && int.TryParse(m.Groups["version"].Value, out var v) ? v : 1;
+    }
+
+    /// <summary>Returns the library store key for a tab: "Artist - Song" for V1, "Artist - Song V2" for higher versions.</summary>
+    public static string StoreKey(string artist, string song, int version) =>
+        version > 1 ? $"{artist} - {song} V{version}" : $"{artist} - {song}";
+
     /// <summary>Parses all matching .txt files in a directory.</summary>
     public static IEnumerable<SavedTab> ParseDirectory(string directoryPath) =>
         Directory.EnumerateFiles(directoryPath, "*.txt")

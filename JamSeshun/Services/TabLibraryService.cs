@@ -49,6 +49,9 @@ public sealed class TabLibraryService : IDisposable
                        .Select(e => (e.Id, e.Name));
     }
 
+    public bool NameExists(string name) =>
+        _entries.Exists(Query.EQ("Name", name));
+
     public void Delete(Guid id)
     {
         _entries.Delete(new BsonValue(id));

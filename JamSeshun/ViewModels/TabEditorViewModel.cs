@@ -17,6 +17,9 @@ public class TabEditorViewModel : ViewModelBase
     public TabEditorViewModel()
     {
         SaveCommand         = new RelayCommand(Save, CanSave);
+        DeleteCommand       = new RelayCommand(() => IsConfirmingDelete = true, () => _editingId.HasValue);
+        ConfirmDeleteCommand = new RelayCommand(Delete);
+        CancelDeleteCommand  = new RelayCommand(() => IsConfirmingDelete = false);
         ClearCommand        = new RelayCommand(Clear);
         IncrementCapoCommand = new RelayCommand(() => { if (capo < 12) Capo = capo + 1; });
         DecrementCapoCommand = new RelayCommand(() => { if (capo > 0)  Capo = capo - 1; });
@@ -70,11 +73,24 @@ public class TabEditorViewModel : ViewModelBase
     public bool HasSavedMessage => !string.IsNullOrEmpty(savedMessage);
 
     public event Action? Saved;
+    public event Action? Deleted;
+
+    private bool isConfirmingDelete;
+    public bool IsConfirmingDelete
+    {
+        get => isConfirmingDelete;
+        private set => SetProperty(ref isConfirmingDelete, value);
+    }
 
     public RelayCommand SaveCommand { get; }
+    public RelayCommand DeleteCommand { get; }        // shows confirmation
+    public RelayCommand ConfirmDeleteCommand { get; } // actually deletes
+    public RelayCommand CancelDeleteCommand { get; }  // hides confirmation
     public RelayCommand ClearCommand { get; }
     public RelayCommand IncrementCapoCommand { get; }
     public RelayCommand DecrementCapoCommand { get; }
+
+    public bool CanDelete => _editingId.HasValue;
 
     public void LoadForEdit(Guid id, SavedTab tab)
     {
@@ -86,10 +102,20 @@ public class TabEditorViewModel : ViewModelBase
         Capo = tab.Capo;
         SavedMessage = string.Empty;
         OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(CanDelete));
+        DeleteCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanSave() =>
         !string.IsNullOrWhiteSpace(artist) && !string.IsNullOrWhiteSpace(song);
+
+    private void Delete()
+    {
+        if (_library == null || _editingId == null) return;
+        IsConfirmingDelete = false;
+        _library.Delete(_editingId.Value);
+        Deleted?.Invoke();
+    }
 
     private void Save()
     {
@@ -111,5 +137,7 @@ public class TabEditorViewModel : ViewModelBase
         SavedMessage = string.Empty;
         _editingId = null;
         OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(CanDelete));
+        DeleteCommand.NotifyCanExecuteChanged();
     }
 }

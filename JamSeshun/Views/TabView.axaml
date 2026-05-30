@@ -135,7 +135,7 @@
           <DataTemplate x:DataType="vm:TabLine">
             <TextBlock Text="{Binding Text}"
                        Foreground="{Binding ForegroundBrush}"
-                       FontFamily="Consolas,Courier New,monospace"
+                       FontFamily="avares://JamSeshun/Assets/Fonts#JetBrains Mono"
                        FontSize="13"
                        FontWeight="{Binding FontWeight}"
                        MinHeight="{Binding MinHeight}"

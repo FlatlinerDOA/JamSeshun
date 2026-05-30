@@ -15,7 +15,16 @@ public partial class TabEditorView : UserControl
         DataContextChanged += (_, _) =>
         {
             if (DataContext is TabEditorViewModel vm)
-                vm.Saved += async () => await PopAsync();
+            {
+                vm.Saved   += async () => await PopAsync();
+                vm.Deleted += async () =>
+                {
+                    var nav = this.FindAncestorOfType<NavigationPage>();
+                    if (nav == null) return;
+                    await nav.PopAsync(); // editor → tab viewer
+                    await nav.PopAsync(); // tab viewer → songs list
+                };
+            }
         };
     }
 

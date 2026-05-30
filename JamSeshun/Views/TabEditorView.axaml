@@ -49,7 +49,7 @@
 
     <!-- ── Header with back button ────────────────────────── -->
     <Border DockPanel.Dock="Top" Background="#0f172a" Padding="0,8,16,8">
-      <Grid ColumnDefinitions="Auto,*,Auto">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
         <Button Grid.Column="0"
                 x:Name="BackButton"
                 Background="Transparent"
@@ -65,6 +65,17 @@
                    FontSize="18" FontWeight="Bold" Foreground="White"
                    VerticalAlignment="Center" />
         <Button Grid.Column="2"
+                Command="{Binding DeleteCommand}"
+                IsVisible="{Binding CanDelete}"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="10"
+                Margin="4,0"
+                VerticalAlignment="Center"
+                ToolTip.Tip="Delete tab">
+          <i:Icon Value="fa-solid fa-trash" FontSize="15" Foreground="#ef4444" />
+        </Button>
+        <Button Grid.Column="3"
                 Classes="save-btn"
                 Command="{Binding SaveCommand}"
                 Content="Save"
@@ -129,6 +140,37 @@
       </Grid>
     </Border>
 
+    <!-- ── Delete confirmation ───────────────────────────── -->
+    <Border DockPanel.Dock="Bottom"
+            Background="#1a0a0a"
+            BorderBrush="#ef4444"
+            BorderThickness="0,1,0,0"
+            Padding="12,10"
+            IsVisible="{Binding IsConfirmingDelete}">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBlock Grid.Column="0"
+                   Text="Delete this tab?"
+                   Foreground="#fca5a5"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+        <Button Grid.Column="1"
+                Command="{Binding CancelDeleteCommand}"
+                Content="Cancel"
+                Background="Transparent"
+                Foreground="#94a3b8"
+                BorderThickness="0"
+                Padding="14,8"
+                Margin="0,0,8,0" />
+        <Button Grid.Column="2"
+                Command="{Binding ConfirmDeleteCommand}"
+                Content="Delete"
+                Background="#ef4444"
+                Foreground="White"
+                BorderThickness="0"
+                Padding="14,8" />
+      </Grid>
+    </Border>
+
     <!-- ── Saved confirmation ─────────────────────────────── -->
     <Border DockPanel.Dock="Bottom"
             Background="#0f172a"
@@ -152,7 +194,7 @@
       <TextBox AcceptsReturn="True"
                AcceptsTab="True"
                Text="{Binding Content}"
-               FontFamily="Consolas,Courier New,monospace"
+               FontFamily="avares://JamSeshun/Assets/Fonts#JetBrains Mono"
                FontSize="13"
                Foreground="#e2e8f0"
                Background="#111827"

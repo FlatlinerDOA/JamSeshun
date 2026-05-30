@@ -20,6 +20,9 @@
         <views:TabListView DataContext="{Binding TabListVM}" />
       </ContentPage>
     </NavigationPage>
+    <ContentPage Header="Editor">
+      <views:TabEditorView DataContext="{Binding TabEditorVM}" />
+    </ContentPage>
     <ContentPage Header="Performance">
       <views:PerformanceView DataContext="{Binding PerformanceVM}" />
     </ContentPage>

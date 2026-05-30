@@ -7,27 +7,64 @@ public class TabViewModel : ViewModelBase
 {
     public TabViewModel() { }
 
-    public TabViewModel(Tab tab)
+    public TabViewModel(SavedTab tab)
     {
-        Tab = tab;
+        _tab = tab;
     }
 
-    public Tab? Tab { get; }
-    public string Artist => Tab?.Name.Artist ?? string.Empty;
-    public string Song => Tab?.Name.Song ?? string.Empty;
-    public string? WikiTab => Tab?.WikiTab;
-    public GuitarTuning? Tuning => Tab?.Tuning;
-    public string TuningDisplay => Tuning != null
-        ? Tuning.Capo > 0 ? $"{Tuning.Name}  ·  Capo: {Tuning.Capo}" : Tuning.Name
-        : string.Empty;
-    public bool HasTuning => Tab?.Tuning != null && !string.IsNullOrEmpty(Tab.Tuning.Name);
-    public IReadOnlyList<Chord> Chords => Tab?.Chords ?? [];
-    public bool HasChords => Chords.Count > 0;
+    private SavedTab? _tab;
+    public SavedTab? Tab
+    {
+        get => _tab;
+        set
+        {
+            if (_tab == value) return;
+            _tab = value;
+            OnPropertyChanged(nameof(Tab));
+            OnPropertyChanged(nameof(Artist));
+            OnPropertyChanged(nameof(Song));
+            OnPropertyChanged(nameof(TuningDisplay));
+            OnPropertyChanged(nameof(HasTuning));
+            OnPropertyChanged(nameof(Chords));
+            OnPropertyChanged(nameof(HasChords));
+            OnPropertyChanged(nameof(Lines));
+        }
+    }
 
-    public IReadOnlyList<TabLine> Lines => ParseLines(WikiTab);
+    public string Artist => _tab?.Artist ?? string.Empty;
+    public string Song => _tab?.Song ?? string.Empty;
+    public string TuningDisplay => _tab is { Tuning: { Length: > 0 } t }
+        ? (_tab.Capo > 0 ? $"{t}  ·  Capo: {_tab.Capo}" : t)
+        : string.Empty;
+    public bool HasTuning => !string.IsNullOrEmpty(_tab?.Tuning);
+    public IReadOnlyList<Chord> Chords => ParseChords(_tab?.Content);
+    public bool HasChords => Chords.Count > 0;
+    public IReadOnlyList<TabLine> Lines => ParseLines(_tab?.Content);
 
     private static readonly Regex ChordRegex =
         new(@"^[A-G][#b]?[a-zA-Z0-9]*(\/[A-G][#b]?)?$", RegexOptions.Compiled);
+
+    private static IReadOnlyList<Chord> ParseChords(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return [];
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var chords = new List<Chord>();
+        foreach (var raw in text.Split('\n'))
+        {
+            var line = raw.TrimEnd('\r');
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            var tokens = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var chordTokens = tokens.Where(t => ChordRegex.IsMatch(t)).ToList();
+            if (tokens.Length > 0 && chordTokens.Count > 0 &&
+                (double)chordTokens.Count / tokens.Length >= 0.5)
+            {
+                foreach (var t in chordTokens)
+                    if (seen.Add(t))
+                        chords.Add(new Chord(t));
+            }
+        }
+        return chords;
+    }
 
     private static IReadOnlyList<TabLine> ParseLines(string? text)
     {

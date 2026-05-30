@@ -20,10 +20,9 @@
 
     <!--Condition below is needed to remove diagnostics package from build output in Release configuration.-->
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
+    <PackageReference Include="LiteDB" Version="5.0.21" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
   </ItemGroup>
 

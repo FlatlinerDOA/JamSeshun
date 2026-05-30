@@ -2,7 +2,6 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using System.Runtime.Intrinsics;
-using Newtonsoft.Json.Linq;
 
 namespace JamSeshun.Services.Tuning;
 

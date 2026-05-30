@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.VisualTree;
-using JamSeshun.Services;
 using JamSeshun.ViewModels;
 
 namespace JamSeshun.Views;
@@ -36,7 +35,6 @@ public partial class TabListView : UserControl
         var navPage = this.FindAncestorOfType<NavigationPage>();
         if (navPage == null) return;
 
-        // Set DataContext immediately so compiled bindings never inherit MainViewModel
         var vm = new TabViewModel();
         var tabView = new TabView { DataContext = vm };
         var contentPage = new ContentPage
@@ -47,11 +45,8 @@ public partial class TabListView : UserControl
 
         await navPage.PushAsync(contentPage);
 
-        if (tabRef.Url != null)
-        {
-            var tab = await GuitarTabsService.DownloadTabAsync(tabRef.Url);
-            if (tab != null)
-                tabView.DataContext = new TabViewModel(tab);
-        }
+        var savedTab = _vm?.LoadTab(tabRef.Id);
+        if (savedTab != null)
+            vm.Tab = savedTab;
     }
 }

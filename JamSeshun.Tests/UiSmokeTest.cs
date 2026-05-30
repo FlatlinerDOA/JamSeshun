@@ -34,8 +34,8 @@ public class UiSmokeTest
         vm.CurrentNote = "A";
         vm.CurrentFrequency = 438.2f;
         vm.CurrentErrorInCents = -8.5f;
-        vm.CurrentErrorInDegrees = -9.4f; // slightly flat
-        vm.Confidence = 0.9f;             // confident reading → full opacity
+        vm.CurrentErrorInDegrees = -9.4f;
+        vm.Confidence = 0.9f;
         window.Content = new TunerView { DataContext = vm };
         window.Show();
 
@@ -65,19 +65,13 @@ public class UiSmokeTest
     [AvaloniaFact]
     public void TabView_ShouldRender()
     {
-        var sampleTab = new Tab(
-            Name: new TabReference("Oasis", "Wonderwall", 4, "Tab", 12403, 4.8m, (string?)null),
-            Tuning: new GuitarTuning("Standard", "EADGBe", 0),
-            WikiTab: SampleWikiTab,
-            Chords:
-            [
-                new Chord("Em7",  "em7",  "chord", [0,2,2,0,3,3], [0,2,3,0,4,4]),
-                new Chord("G",    "g",    "chord", [3,2,0,0,0,3], [3,2,0,0,0,4]),
-                new Chord("Dsus4","dsus4","chord", [0,0,0,2,3,3], [0,0,0,1,3,4]),
-                new Chord("A7sus4","a7sus4","chord",[0,0,2,0,3,0],[0,0,2,0,3,0]),
-                new Chord("Cadd9","cadd9","chord", [0,3,2,0,3,3], [0,3,2,0,4,4]),
-            ]
-        );
+        var sampleTab = new SavedTab(
+            Artist: "Oasis",
+            Song: "Wonderwall",
+            Content: SampleTabContent,
+            Tuning: "Standard (EADGBe)",
+            Capo: 0,
+            DateSaved: DateTimeOffset.Now);
 
         var window = new Window { Width = 400, Height = 700 };
         window.Content = new TabView { DataContext = new TabViewModel(sampleTab) };
@@ -91,31 +85,34 @@ public class UiSmokeTest
         frame.Save(fs);
     }
 
-    private const string SampleWikiTab = @"Intro: Em7 G Dsus4 A7sus4
+    [AvaloniaFact]
+    public void TabEditorView_ShouldRender()
+    {
+        var window = new Window { Width = 400, Height = 700 };
+        window.Content = new TabEditorView { DataContext = new TabEditorViewModel() };
+        window.Show();
+
+        var frame = window.CaptureRenderedFrame();
+        Assert.NotNull(frame);
+
+        Directory.CreateDirectory("/tmp/jamseshun-ui");
+        using var fs = File.OpenWrite("/tmp/jamseshun-ui/tab-editor-view.png");
+        frame.Save(fs);
+    }
+
+    private const string SampleTabContent = @"Intro: Em7 G Dsus4 A7sus4
 
 Verse 1:
 Em7              G
 Today is gonna be the day
               Dsus4           A7sus4
 That they're gonna throw it back to you
-Em7              G
-By now you should've somehow
-              Dsus4           A7sus4
-Realized what you gotta do
-Em7                  G
-I don't believe that anybody
-    Dsus4              A7sus4          Em7
-Feels the way I do about you now
 
 Chorus:
   Cadd9          G
 Because maybe
              Dsus4                A7sus4
 You're gonna be the one that saves me
-  Cadd9          G
-And after all
-             Dsus4         A7sus4
-You're my Wonderwall
 
 Tab (Intro):
 e|--3--3--3--3--3--3--3--3--|

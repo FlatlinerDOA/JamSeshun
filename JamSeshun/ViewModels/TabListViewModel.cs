@@ -6,7 +6,7 @@ namespace JamSeshun.ViewModels;
 
 public partial class TabListViewModel : ViewModelBase
 {
-    private readonly GuitarTabsService? tabsService;
+    private readonly TabLibraryService? _library;
     private string searchQuery = string.Empty;
     private bool isSearching;
     private TabReferenceViewModel? selectedTabReference;
@@ -15,13 +15,34 @@ public partial class TabListViewModel : ViewModelBase
     {
         SearchCommand = new AsyncRelayCommand(SearchAsync);
         SearchResults.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasSearchResults));
-        Favorites.Add(new(new TabReference("Frank Sinatra", "Come Fly With Me", 1, "Tab", 100, 0.5m, (string?)null)));
-        Favorites.Add(new(new TabReference("The Beatles", "Come Together", 1, "Tab", 1400, 0.7m, (string?)null)));
     }
 
-    public TabListViewModel(GuitarTabsService tabsService) : this()
+    public TabListViewModel(TabLibraryService library) : this()
     {
-        this.tabsService = tabsService;
+        _library = library;
+        _library.Changed += LoadAll;
+        LoadAll();
+    }
+
+    private void LoadAll()
+    {
+        AllTabs.Clear();
+        if (_library == null) return;
+        foreach (var (id, name) in _library.GetAll())
+        {
+            var parts = name.Split(" - ", 2);
+            AllTabs.Add(new TabReferenceViewModel(id,
+                parts.Length > 1 ? parts[0] : name,
+                parts.Length > 1 ? parts[1] : string.Empty));
+        }
+    }
+
+    public SavedTab? LoadTab(Guid id) => _library?.Get(id);
+
+    public void DeleteTab(Guid id)
+    {
+        _library?.Delete(id);
+        // LoadAll() fires via Changed event
     }
 
     public string SearchQuery
@@ -47,25 +68,29 @@ public partial class TabListViewModel : ViewModelBase
         set => SetProperty(ref selectedTabReference, value);
     }
 
-    public ObservableCollection<TabReferenceViewModel> Favorites { get; } = new();
+    public ObservableCollection<TabReferenceViewModel> AllTabs { get; } = new();
     public ObservableCollection<TabReferenceViewModel> SearchResults { get; } = new();
-
     public bool HasSearchResults => SearchResults.Count > 0;
 
     public IAsyncRelayCommand SearchCommand { get; }
 
     private async Task SearchAsync()
     {
-        if (string.IsNullOrWhiteSpace(SearchQuery) || tabsService == null)
+        if (string.IsNullOrWhiteSpace(SearchQuery) || _library == null)
             return;
 
         IsSearching = true;
         SearchResults.Clear();
         try
         {
-            var results = await tabsService.SearchAsync(SearchQuery);
-            foreach (var r in results)
-                SearchResults.Add(new TabReferenceViewModel(r));
+            await Task.Yield();
+            foreach (var (id, name) in _library.Search(SearchQuery))
+            {
+                var parts = name.Split(" - ", 2);
+                SearchResults.Add(new TabReferenceViewModel(id,
+                    parts.Length > 1 ? parts[0] : name,
+                    parts.Length > 1 ? parts[1] : string.Empty));
+            }
         }
         finally
         {

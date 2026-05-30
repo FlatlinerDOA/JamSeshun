@@ -8,25 +8,27 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    # iOS is excluded — it requires a specific Xcode version not yet stable on runners
+    runs-on: ubuntu-latest
     steps:
-    - name: Setup Xcode version
-      uses: maxim-lobanov/setup-xcode@v1.6.0
-      with:
-        xcode-version: latest-stable
-    - name: Check Xcode version
-      run: /usr/bin/xcodebuild -version
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 10.0.x
-    - name: Restore workload
-      run: dotnet workload restore
+    - name: Restore workloads
+      run: dotnet workload restore JamSeshun.Android/JamSeshun.Android.csproj
     - name: Restore dependencies
-      run: dotnet restore
+      run: |
+        dotnet restore JamSeshun/JamSeshun.csproj
+        dotnet restore JamSeshun.Desktop/JamSeshun.Desktop.csproj
+        dotnet restore JamSeshun.Android/JamSeshun.Android.csproj
+        dotnet restore JamSeshun.Tests/JamSeshun.Tests.csproj
     - name: Build
-      run: dotnet build --no-restore
+      run: |
+        dotnet build JamSeshun/JamSeshun.csproj --no-restore
+        dotnet build JamSeshun.Desktop/JamSeshun.Desktop.csproj --no-restore
+        dotnet build JamSeshun.Android/JamSeshun.Android.csproj --no-restore
+        dotnet build JamSeshun.Tests/JamSeshun.Tests.csproj --no-restore
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test JamSeshun.Tests/JamSeshun.Tests.csproj --no-build --verbosity normal

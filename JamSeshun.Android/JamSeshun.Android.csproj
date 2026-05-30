@@ -4,13 +4,12 @@
     <TargetFramework>net10.0-android</TargetFramework>
     <SupportedOSPlatformVersion>28.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
-    <ApplicationId>com.CompanyName.AvaloniaTest</ApplicationId>
+    <ApplicationId>com.flatlinerdoa.jamseshun</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
-    <ApplicationId>com.flatlinerdoa.jamseshun</ApplicationId>
   </PropertyGroup>
 
   <ItemGroup>

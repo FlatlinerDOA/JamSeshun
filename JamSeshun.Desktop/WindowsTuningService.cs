@@ -66,9 +66,10 @@ internal class WindowsTuningService : ITuningService
                                 var samplesRead = sampleProvider.Read(sampleBuffer, 0, pitchDetector.SampleBufferSize);
                                 if (samplesRead != pitchDetector.SampleBufferSize) break;
 
+                                // Emit every frame (pitched or not) so the UI can show
+                                // the live signal level; the view model decides what to display.
                                 var detected = pitchDetector.DetectPitch(sampleBuffer.AsSpan(0, samplesRead));
-                                if (detected.Fundamental.Name != null)
-                                    observer.OnNext(detected);
+                                observer.OnNext(detected);
                             }
                         }
                         finally

@@ -42,11 +42,32 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
 
     public DetectedPitch DetectPitch(ReadOnlySpan<float> signal)
     {
+        float level = ComputeRms(signal);
         var frequency = (float)FindFundamentalFrequency(signal);
         var note = Note.GetClosestNote(frequency, MinimumFrequency, MaximumFrequency);
+
+        // Always report the signal level (even when no pitch is found) so callers
+        // can tell "no audio arriving" apart from "audio present but unpitched".
         return note.Name != null
-            ? new DetectedPitch(frequency, note, note.GetCentsError(frequency))
-            : default;
+            ? new DetectedPitch(frequency, note, note.GetCentsError(frequency), level)
+            : new DetectedPitch(0f, default, 0f, level);
+    }
+
+    /// <summary>Root-mean-square amplitude with DC offset removed (0..1).</summary>
+    private static float ComputeRms(ReadOnlySpan<float> signal)
+    {
+        if (signal.Length == 0) return 0f;
+        double mean = 0;
+        for (int i = 0; i < signal.Length; i++) mean += signal[i];
+        mean /= signal.Length;
+
+        double sumSq = 0;
+        for (int i = 0; i < signal.Length; i++)
+        {
+            double v = signal[i] - mean;
+            sumSq += v * v;
+        }
+        return (float)Math.Sqrt(sumSq / signal.Length);
     }
 
     private double FindFundamentalFrequency(ReadOnlySpan<float> signal)

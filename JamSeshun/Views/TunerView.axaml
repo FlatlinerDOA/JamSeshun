@@ -25,12 +25,37 @@
     <Style Selector="Button.start-btn:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="#2a4a7f" />
     </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="Background" Value="#1e293b" />
+      <Setter Property="Foreground" Value="#e2e8f0" />
+      <Setter Property="BorderBrush" Value="#334155" />
+    </Style>
   </UserControl.Styles>
 
   <DockPanel>
 
+    <!-- ── Input device picker ────────────────────────────── -->
+    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12,10">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Top"
+                   Text="INPUT DEVICE"
+                   FontSize="10" FontWeight="SemiBold"
+                   Foreground="#64748b"
+                   Margin="2,0,0,4" />
+        <ComboBox ItemsSource="{Binding Devices}"
+                  SelectedItem="{Binding SelectedDevice}"
+                  HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </DockPanel>
+    </Border>
+
     <!-- ── Note display ───────────────────────────────────── -->
-    <Border DockPanel.Dock="Top" Padding="0,28,0,0">
+    <Border DockPanel.Dock="Top" Padding="0,24,0,0">
       <StackPanel HorizontalAlignment="Center" Spacing="4">
         <TextBlock Text="{Binding NoteDisplay}"
                    FontSize="80" FontWeight="Bold" Foreground="White"
@@ -45,12 +70,25 @@
       </StackPanel>
     </Border>
 
-    <!-- ── Start/Stop button ──────────────────────────────── -->
-    <Border DockPanel.Dock="Bottom" Padding="0,20,0,28">
-      <Button Classes="start-btn"
-              Command="{Binding StartCommand}"
-              Content="{Binding StartButtonText}"
-              HorizontalAlignment="Center" />
+    <!-- ── Start/Stop button + live diagnostics ───────────── -->
+    <Border DockPanel.Dock="Bottom" Padding="16,16,16,24">
+      <StackPanel HorizontalAlignment="Center" Spacing="10">
+        <!-- Live input level meter: confirms the selected device is receiving audio -->
+        <ProgressBar Width="220" Height="4"
+                     Minimum="0" Maximum="0.2"
+                     Value="{Binding SignalLevel}"
+                     Foreground="#4ade80" Background="#1e293b"
+                     IsVisible="{Binding IsRunning}" />
+        <TextBlock Text="{Binding DiagnosticsDisplay}"
+                   FontFamily="Consolas,monospace" FontSize="11"
+                   Foreground="#475569"
+                   HorizontalAlignment="Center"
+                   IsVisible="{Binding IsRunning}" />
+        <Button Classes="start-btn"
+                Command="{Binding StartCommand}"
+                Content="{Binding StartButtonText}"
+                HorizontalAlignment="Center" />
+      </StackPanel>
     </Border>
 
     <!-- ── Gauge (fills remaining space) ─────────────────── -->

@@ -52,10 +52,9 @@ internal partial class AndroidTuningService : ITuningService
                             var detected = pitchDetector.DetectPitch(sampleBuffer.AsMemory().Span);
                             ArrayPool<float>.Shared.Return(sampleBuffer, true);
                             sampleBuffer = ArrayPool<float>.Shared.Rent(pitchDetector.SampleBufferSize);
-                            if (detected.Fundamental.Name != null)
-                            {
-                                observer.OnNext(detected);
-                            }
+                            // Emit every frame so the UI can show live signal level;
+                            // the view model filters to pitched frames for the note.
+                            observer.OnNext(detected);
                         }
                     })
                 };

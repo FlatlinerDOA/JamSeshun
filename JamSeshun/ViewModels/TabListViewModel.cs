@@ -32,7 +32,10 @@ public partial class TabListViewModel : ViewModelBase
     private void LoadAll()
     {
         AllTabs.Clear();
-        if (_library == null) return;
+        if (_library == null)
+        {
+            return;
+        }
         foreach (var (id, name) in _library.GetAll().OrderBy(e => SongPart(e.Name)))
         {
             var parts = name.Split(" - ", 2);
@@ -80,7 +83,10 @@ public partial class TabListViewModel : ViewModelBase
     private void FilterResults()
     {
         SearchResults.Clear();
-        if (string.IsNullOrWhiteSpace(searchQuery) || _library == null) return;
+        if (string.IsNullOrWhiteSpace(searchQuery) || _library == null)
+        {
+            return;
+        }
         foreach (var (id, name) in _library.Search(searchQuery).OrderBy(e => SongPart(e.Name)))
         {
             var parts = name.Split(" - ", 2);
@@ -116,14 +122,23 @@ public partial class TabListViewModel : ViewModelBase
 
     public async Task<bool> ImportOneAsync(string fileName, string content)
     {
-        if (_library == null) return false;
+        if (_library == null)
+        {
+            return false;
+        }
         var saved = await Task.Run(() =>
         {
             var tab = WikiTabParser.Parse(fileName, content);
-            if (tab == null) return false;
+            if (tab == null)
+            {
+                return false;
+            }
             var version = WikiTabParser.ParseVersion(fileName);
             var name    = WikiTabParser.StoreKey(tab.Artist, tab.Song, version);
-            if (_library.NameExists(name)) return false;
+            if (_library.NameExists(name))
+            {
+                return false;
+            }
             _library.Save(Guid.NewGuid(), name, tab);
             return true;
         });

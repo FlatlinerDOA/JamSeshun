@@ -43,7 +43,10 @@ public partial class TunerNeedle : Control
     {
         var w = Bounds.Width;
         var h = Bounds.Height;
-        if (w <= 0 || h <= 0) return;
+        if (w <= 0 || h <= 0)
+        {
+            return;
+        }
 
         var cx = w / 2;
         var cy = h * 0.88;

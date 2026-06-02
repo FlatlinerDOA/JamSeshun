@@ -22,23 +22,36 @@ public partial class TabListView : UserControl
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_vm != null)
+        {
             _vm.PropertyChanged -= OnVmPropertyChanged;
+        }
 
         _vm = DataContext as TabListViewModel;
 
         if (_vm != null)
+        {
             _vm.PropertyChanged += OnVmPropertyChanged;
+        }
     }
 
     private async void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(TabListViewModel.SelectedTabReference)) return;
+        if (e.PropertyName != nameof(TabListViewModel.SelectedTabReference))
+        {
+            return;
+        }
 
         var tabRef = _vm?.SelectedTabReference;
-        if (tabRef == null) return;
+        if (tabRef == null)
+        {
+            return;
+        }
 
         var navPage = this.FindAncestorOfType<NavigationPage>();
-        if (navPage == null) return;
+        if (navPage == null)
+        {
+            return;
+        }
 
         var library = App.ServiceProvider.GetRequiredService<TabLibraryService>();
         var vm = new TabViewModel(library);
@@ -49,7 +62,9 @@ public partial class TabListView : UserControl
         await navPage.PushAsync(contentPage);
 
         if (_vm != null)
+        {
             _vm.SelectedTabReference = null;
+        }
 
         var savedTab = _vm?.LoadTab(tabRef.Id);
         if (savedTab != null)
@@ -62,7 +77,10 @@ public partial class TabListView : UserControl
     private async void OnNewTabClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         var navPage = this.FindAncestorOfType<NavigationPage>();
-        if (navPage == null) return;
+        if (navPage == null)
+        {
+            return;
+        }
 
         var editorVm = App.ServiceProvider.GetRequiredService<TabEditorViewModel>();
         var editorView = new TabEditorView { DataContext = editorVm };
@@ -80,10 +98,16 @@ public partial class TabListView : UserControl
 
     private async void OnImportClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (_vm == null) return;
+        if (_vm == null)
+        {
+            return;
+        }
 
         var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel == null) return;
+        if (topLevel == null)
+        {
+            return;
+        }
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -92,7 +116,10 @@ public partial class TabListView : UserControl
             FileTypeFilter = [TxtFiles]
         });
 
-        if (files.Count == 0) return;
+        if (files.Count == 0)
+        {
+            return;
+        }
 
         _vm.BeginImport(files.Count);
         var saved = 0;
@@ -105,7 +132,9 @@ public partial class TabListView : UserControl
                 using var reader = new StreamReader(stream);
                 content = await reader.ReadToEndAsync();
                 if (await _vm.ImportOneAsync(file.Name, content))
+                {
                     saved++;
+                }
             }
         }
         finally

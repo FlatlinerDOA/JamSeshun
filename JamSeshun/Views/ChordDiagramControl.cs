@@ -45,7 +45,10 @@ public class ChordDiagramControl : Control
     public override void Render(DrawingContext ctx)
     {
         var frets = Frets;
-        if (frets == null || frets.Length != StringCount) return;
+        if (frets == null || frets.Length != StringCount)
+        {
+            return;
+        }
 
         // ── Determine which frets to display ─────────────────────────────────
         var frettedValues = frets.Where(f => f > 0).ToArray();
@@ -55,7 +58,9 @@ public class ChordDiagramControl : Control
             var minFret = frettedValues.Min();
             var maxFret = frettedValues.Max();
             if (maxFret > FretCount)
+            {
                 startFret = minFret;
+            }
         }
 
         // ── Pens and brushes ──────────────────────────────────────────────────
@@ -131,7 +136,10 @@ public class ChordDiagramControl : Control
             {
                 // Fretted: filled dot between fret lines
                 int relative = fret - startFret + 1;
-                if (relative < 1 || relative > FretCount) continue;
+                if (relative < 1 || relative > FretCount)
+                {
+                    continue;
+                }
                 double dotY = nutY + (relative - 0.5) * FretGap;
                 ctx.DrawEllipse(dotBrush, null, new Point(x, dotY), DotRadius, DotRadius);
             }

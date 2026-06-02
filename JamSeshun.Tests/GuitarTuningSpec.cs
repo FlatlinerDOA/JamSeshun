@@ -127,7 +127,10 @@ public class GuitarTuningSpec
     public void Everlong_WikiTabParser_ExtractsDropDTuning()
     {
         var path = TabPath("Foo Fighters - Everlong.txt");
-        if (!File.Exists(path)) return;
+        if (!File.Exists(path))
+        {
+            return;
+        }
 
         var content = File.ReadAllText(path);
         var tab = WikiTabParser.Parse("Foo Fighters - Everlong V1.Chords.txt", content);
@@ -140,7 +143,10 @@ public class GuitarTuningSpec
     public void Everlong_TuningParsesToDropD()
     {
         var path = TabPath("Foo Fighters - Everlong.txt");
-        if (!File.Exists(path)) return;
+        if (!File.Exists(path))
+        {
+            return;
+        }
 
         var content = File.ReadAllText(path);
         var tab = WikiTabParser.Parse("Foo Fighters - Everlong V1.Chords.txt", content);
@@ -156,7 +162,10 @@ public class GuitarTuningSpec
     public void RainSong_WikiTabParser_ExtractsStudioTuning()
     {
         var path = TabPath("Led Zeppelin - Rain Song.txt");
-        if (!File.Exists(path)) return;
+        if (!File.Exists(path))
+        {
+            return;
+        }
 
         var content = File.ReadAllText(path);
         var tab = WikiTabParser.Parse("Led Zeppelin - Rain Song V1.Chords.txt", content);
@@ -170,7 +179,10 @@ public class GuitarTuningSpec
     public void RainSong_TuningParsesToDGCGCD()
     {
         var path = TabPath("Led Zeppelin - Rain Song.txt");
-        if (!File.Exists(path)) return;
+        if (!File.Exists(path))
+        {
+            return;
+        }
 
         var content = File.ReadAllText(path);
         var tab = WikiTabParser.Parse("Led Zeppelin - Rain Song V1.Chords.txt", content);

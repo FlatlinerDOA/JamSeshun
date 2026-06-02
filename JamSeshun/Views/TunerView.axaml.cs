@@ -22,7 +22,10 @@ public partial class TunerView : UserControl
 
     private void OnStringGuideTapped(object? sender, PointerPressedEventArgs e)
     {
-        if (DataContext is not TunerViewModel vm) return;
+        if (DataContext is not TunerViewModel vm)
+        {
+            return;
+        }
 
         var source = e.Source as Visual;
         while (source != null)

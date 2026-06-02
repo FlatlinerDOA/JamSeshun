@@ -97,7 +97,9 @@ public sealed class BitStreamAutoCorrelatedPitchDetector : IPitchDetector
 
         // Ensure we don't go out of bounds in the next step
         if (estIndex == 0 || estIndex - 1 >= correlationCounts.Length || startIndex >= correlationCounts.Length)
+        {
             return 0.0f; // No frequency detected
+        }
 
         float dy = correlationCounts[startIndex] - prev;
         float dx1 = -prev / dy;

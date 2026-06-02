@@ -56,7 +56,10 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
     /// <summary>Root-mean-square amplitude with DC offset removed (0..1).</summary>
     private static float ComputeRms(ReadOnlySpan<float> signal)
     {
-        if (signal.Length == 0) return 0f;
+        if (signal.Length == 0)
+        {
+            return 0f;
+        }
         double mean = 0;
         for (int i = 0; i < signal.Length; i++) mean += signal[i];
         mean /= signal.Length;
@@ -73,7 +76,10 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
     private double FindFundamentalFrequency(ReadOnlySpan<float> signal)
     {
         int hiLag = Math.Min(maxLag, signal.Length / 2);
-        if (hiLag <= minLag) return 0d;
+        if (hiLag <= minLag)
+        {
+            return 0d;
+        }
 
         // Remove DC offset. Real microphone input carries DC bias and sub-bass
         // rumble that inflate the zero-lag energy and otherwise swamp the
@@ -94,7 +100,10 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
         }
 
         // Silence gate (energy is on DC-removed signal, so quiet rooms pass through).
-        if (energy < 1e-4) return 0d;
+        if (energy < 1e-4)
+        {
+            return 0d;
+        }
 
         // Autocorrelation across the candidate lag range.
         var corr = new double[hiLag + 2];
@@ -107,13 +116,19 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
                 sum += x[i] * x[i + lag];
 
             corr[lag] = sum;
-            if (sum > maxPeak) maxPeak = sum;
+            if (sum > maxPeak)
+            {
+                maxPeak = sum;
+            }
         }
 
         // Reject unpitched signals. Normalized against zero-lag energy this is
         // amplitude-independent: a clean tone scores ~0.8+, broadband noise well
         // under the threshold.
-        if (maxPeak <= 0 || maxPeak / energy < PitchedThreshold) return 0d;
+        if (maxPeak <= 0 || maxPeak / energy < PitchedThreshold)
+        {
+            return 0d;
+        }
 
         // Take the first local-maximum peak that reaches PeakRatio of the global
         // max. Scanning low→high lags first means we prefer the shortest period
@@ -131,7 +146,10 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
             }
         }
 
-        if (bestLag == 0) return 0d;
+        if (bestLag == 0)
+        {
+            return 0d;
+        }
 
         // Parabolic interpolation around the peak for sub-sample period accuracy.
         double y0 = corr[bestLag - 1], y1 = corr[bestLag], y2 = corr[bestLag + 1];

@@ -21,8 +21,16 @@ public class TabEditorViewModel : ViewModelBase
         ConfirmDeleteCommand = new RelayCommand(Delete);
         CancelDeleteCommand  = new RelayCommand(() => IsConfirmingDelete = false);
         ClearCommand        = new RelayCommand(Clear);
-        IncrementCapoCommand = new RelayCommand(() => { if (capo < 12) Capo = capo + 1; });
-        DecrementCapoCommand = new RelayCommand(() => { if (capo > 0)  Capo = capo - 1; });
+        IncrementCapoCommand = new RelayCommand(() => { if (capo < 12)
+            {
+                Capo = capo + 1;
+            }
+        });
+        DecrementCapoCommand = new RelayCommand(() => { if (capo > 0)
+            {
+                Capo = capo - 1;
+            }
+        });
     }
 
     public TabEditorViewModel(TabLibraryService library) : this()
@@ -111,7 +119,10 @@ public class TabEditorViewModel : ViewModelBase
 
     private void Delete()
     {
-        if (_library == null || _editingId == null) return;
+        if (_library == null || _editingId == null)
+        {
+            return;
+        }
         IsConfirmingDelete = false;
         _library.Delete(_editingId.Value);
         Deleted?.Invoke();
@@ -119,7 +130,10 @@ public class TabEditorViewModel : ViewModelBase
 
     private void Save()
     {
-        if (_library == null) return;
+        if (_library == null)
+        {
+            return;
+        }
         var tab = new SavedTab(artist.Trim(), song.Trim(), content, tuning.Trim(), capo, DateTimeOffset.Now);
         _editingId ??= Guid.NewGuid();
         _library.Save(_editingId.Value, $"{tab.Artist} - {tab.Song}", tab);

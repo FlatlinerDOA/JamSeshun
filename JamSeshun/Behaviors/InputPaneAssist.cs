@@ -21,16 +21,26 @@ public static class InputPaneAssist
     private static void OnAdjustForKeyboardChanged(TemplatedControl control, AvaloniaPropertyChangedEventArgs e)
     {
         if (e.NewValue is true)
+        {
             control.AttachedToVisualTree += OnAttached;
+        }
         else
+        {
             control.AttachedToVisualTree -= OnAttached;
+        }
     }
 
     private static void OnAttached(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        if (sender is not TemplatedControl control) return;
+        if (sender is not TemplatedControl control)
+        {
+            return;
+        }
         var topLevel = TopLevel.GetTopLevel(control);
-        if (topLevel?.InputPane is not { } inputPane) return;
+        if (topLevel?.InputPane is not { } inputPane)
+        {
+            return;
+        }
 
         var basePadding = control.Padding;
 

@@ -151,7 +151,9 @@ public class WikiTabParserSpec
     public void ParseDirectory_AllFilesParseWithoutError()
     {
         if (!Directory.Exists(WikiTabDir))
+        {
             return; // not available in CI
+        }
 
         var tabs = WikiTabParser.ParseDirectory(WikiTabDir).ToList();
         Assert.NotEmpty(tabs);
@@ -166,7 +168,10 @@ public class WikiTabParserSpec
     [Fact]
     public void ParseDirectory_BabylonHasCapo1()
     {
-        if (!Directory.Exists(WikiTabDir)) return;
+        if (!Directory.Exists(WikiTabDir))
+        {
+            return;
+        }
 
         var babylon = WikiTabParser.ParseDirectory(WikiTabDir)
             .FirstOrDefault(t => t.Artist == "David Gray" && t.Song == "Babylon");
@@ -177,7 +182,10 @@ public class WikiTabParserSpec
     [Fact]
     public void ParseDirectory_SpaceOddityHasStandardTuning()
     {
-        if (!Directory.Exists(WikiTabDir)) return;
+        if (!Directory.Exists(WikiTabDir))
+        {
+            return;
+        }
 
         var tab = WikiTabParser.ParseDirectory(WikiTabDir)
             .FirstOrDefault(t => t.Artist == "David Bowie" && t.Song == "Space Oddity");

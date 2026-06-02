@@ -16,16 +16,24 @@ public partial class TabView : UserControl
         {
             var nav = this.FindAncestorOfType<NavigationPage>();
             if (nav != null)
+            {
                 await nav.PopAsync();
+            }
         };
 
         EditButton.Click += async (_, _) =>
         {
             var tabVm = DataContext as TabViewModel;
-            if (tabVm?.Tab == null || tabVm.Id == null) return;
+            if (tabVm?.Tab == null || tabVm.Id == null)
+            {
+                return;
+            }
 
             var nav = this.FindAncestorOfType<NavigationPage>();
-            if (nav == null) return;
+            if (nav == null)
+            {
+                return;
+            }
 
             var editorVm = App.ServiceProvider.GetRequiredService<TabEditorViewModel>();
             editorVm.LoadForEdit(tabVm.Id.Value, tabVm.Tab);
@@ -43,15 +51,22 @@ public partial class TabView : UserControl
         {
             var tabVm = DataContext as TabViewModel;
             var tuning = GuitarTuning.TryParse(tabVm?.Tab?.Tuning);
-            if (tuning == null) return;
+            if (tuning == null)
+            {
+                return;
+            }
 
             var mainView = this.FindAncestorOfType<MainView>();
             if (mainView?.DataContext is MainViewModel mainVm)
+            {
                 mainVm.TunerVM.TargetTuning = tuning;
+            }
 
             var tabbedPage = this.FindAncestorOfType<TabbedPage>();
             if (tabbedPage != null)
+            {
                 tabbedPage.SelectedIndex = 0;
+            }
         };
     }
 }

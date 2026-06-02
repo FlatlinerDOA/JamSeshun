@@ -66,19 +66,25 @@ public sealed class TuningWorm : Control
         base.OnPropertyChanged(change);
         // Clear history when a fresh tuning session starts.
         if (change.Property == IsActiveProperty && change.GetNewValue<bool>())
+        {
             samples.Clear();
+        }
     }
 
     private void OnTick(object? sender, EventArgs e)
     {
         if (!IsActive)
+        {
             return;
+        }
 
         samples.Add(IsActive && HasReading ? (float)Cents : float.NaN);
 
         int capacity = Math.Max(1, (int)(Bounds.Height / RowStep) + 1);
         if (samples.Count > capacity)
+        {
             samples.RemoveRange(0, samples.Count - capacity);
+        }
 
         InvalidateVisual();
     }
@@ -86,7 +92,10 @@ public sealed class TuningWorm : Control
     public override void Render(DrawingContext ctx)
     {
         double w = Bounds.Width, h = Bounds.Height;
-        if (w <= 0 || h <= 0) return;
+        if (w <= 0 || h <= 0)
+        {
+            return;
+        }
 
         double cx = w / 2;
         double usableHalf = w / 2 - 8;
@@ -104,10 +113,16 @@ public sealed class TuningWorm : Control
         for (int i = 0; i < samples.Count; i++)
         {
             float cents = samples[samples.Count - 1 - i];
-            if (float.IsNaN(cents)) continue;
+            if (float.IsNaN(cents))
+            {
+                continue;
+            }
 
             double y = h - i * RowStep;
-            if (y < 0) break;
+            if (y < 0)
+            {
+                break;
+            }
 
             double clamped = Math.Clamp(cents / MaxCents, -1.0, 1.0);
             double x = cx + clamped * usableHalf;

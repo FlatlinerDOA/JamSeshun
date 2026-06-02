@@ -29,7 +29,10 @@ public record GuitarTuning(string Name, Note[] Strings)
 
     public static GuitarTuning? TryParse(string? raw)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
 
         // Named tunings (tab files store them in header comments)
         var named = raw.Trim().ToUpperInvariant() switch
@@ -42,7 +45,10 @@ public record GuitarTuning(string Name, Note[] Strings)
             "EB STANDARD" or "HALF STEP DOWN" or "HALF-STEP DOWN" or "E FLAT STANDARD" => EbStandard,
             _ => (GuitarTuning?)null
         };
-        if (named != null) return named;
+        if (named != null)
+        {
+            return named;
+        }
 
         // Note-sequence format: "D A D G A D" or "Eb Ab Db Gb Bb Eb"
         // (WikiTabParser's TuningRegex captures [A-Ga-g#b ] so sequences like these are the common stored format)
@@ -63,14 +69,20 @@ public record GuitarTuning(string Name, Note[] Strings)
     private static GuitarTuning? TryParseNoteSequence(string raw)
     {
         var parts = raw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 6) return null;
+        if (parts.Length != 6)
+        {
+            return null;
+        }
 
         var strings = new Note[6];
         for (int i = 0; i < 6; i++)
         {
             var (min, max) = StringFreqRanges[i];
             var note = FindNoteInRange(parts[i], min, max);
-            if (note == null) return null;
+            if (note == null)
+            {
+                return null;
+            }
             strings[i] = note.Value;
         }
         return new GuitarTuning(raw, strings);
@@ -91,13 +103,18 @@ public record GuitarTuning(string Name, Note[] Strings)
 
         var baseNote = Note.BaseNotes.FirstOrDefault(n =>
             n.Name.Equals(canonical, StringComparison.OrdinalIgnoreCase));
-        if (baseNote.Frequency == 0) return null;
+        if (baseNote.Frequency == 0)
+        {
+            return null;
+        }
 
         for (int octave = 0; octave <= 8; octave++)
         {
             var note = baseNote.ShiftOctave(octave);
             if (note.Frequency >= minFreq && note.Frequency <= maxFreq)
+            {
                 return note;
+            }
         }
         return null;
     }

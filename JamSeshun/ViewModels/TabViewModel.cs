@@ -28,7 +28,10 @@ public class TabViewModel : ViewModelBase
         get => _tab;
         set
         {
-            if (_tab == value) return;
+            if (_tab == value)
+            {
+                return;
+            }
             _tab = value;
             OnPropertyChanged(nameof(Tab));
             OnPropertyChanged(nameof(Artist));
@@ -50,12 +53,19 @@ public class TabViewModel : ViewModelBase
     {
         get
         {
-            if (_tab == null) return string.Empty;
+            if (_tab == null)
+            {
+                return string.Empty;
+            }
             var parts = new List<string>(2);
             if (!string.IsNullOrEmpty(_tab.Tuning))
+            {
                 parts.Add(_tab.Tuning);
+            }
             if (_tab.Capo > 0)
+            {
                 parts.Add($"Capo {_tab.Capo}");
+            }
             return string.Join("  ·  ", parts);
         }
     }
@@ -105,7 +115,10 @@ public class TabViewModel : ViewModelBase
 
     private static IReadOnlyList<Chord> ParseChords(string? text)
     {
-        if (string.IsNullOrEmpty(text)) return [];
+        if (string.IsNullOrEmpty(text))
+        {
+            return [];
+        }
 
         // Build a frets lookup from the header Chords: section (may be empty).
         var defs = ParseChordDefinitions(text);
@@ -116,7 +129,9 @@ public class TabViewModel : ViewModelBase
         // Emit defined chords first (content defs beat the library).
         foreach (var (name, frets) in defs)
             if (seen.Add(name))
+            {
                 chords.Add(new Chord(name, frets));
+            }
 
         // Scan body lines for any chord names not already emitted.
         bool inChordSection = false;
@@ -131,12 +146,20 @@ public class TabViewModel : ViewModelBase
             {
                 // Blank line or next section header ends the chord block.
                 if (string.IsNullOrWhiteSpace(line) || (line.TrimStart().StartsWith('[') && line.TrimEnd().EndsWith(']')))
+                {
                     inChordSection = false;
+                }
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            if (MetadataLineRegex.IsMatch(line)) continue;
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+            if (MetadataLineRegex.IsMatch(line))
+            {
+                continue;
+            }
             var tokens     = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var chordNames = tokens.Where(t => ChordRegex.IsMatch(t)).ToList();
 
@@ -145,7 +168,9 @@ public class TabViewModel : ViewModelBase
             {
                 foreach (var t in chordNames)
                     if (seen.Add(t))
+                    {
                         chords.Add(new Chord(t, defs.GetValueOrDefault(t) ?? ChordLibrary.Lookup(t)));
+                    }
             }
         }
 
@@ -175,11 +200,16 @@ public class TabViewModel : ViewModelBase
 
             var line = lines[i].TrimEnd('\r').Trim();
             var m    = ChordDefRegex.Match(line);
-            if (!m.Success) continue;
+            if (!m.Success)
+            {
+                continue;
+            }
 
             var frets = TryParseFrets(m.Groups["frets"].Value);
             if (frets != null)
+            {
                 result.TryAdd(m.Groups["name"].Value, frets);
+            }
         }
 
         return result;
@@ -196,15 +226,24 @@ public class TabViewModel : ViewModelBase
         frets = [];
 
         var header = lines[index].TrimEnd('\r').Trim();
-        if (!ChordRegex.IsMatch(header)) return false; // line must be a single chord name
-        if (index + 6 >= lines.Length)   return false; // need six following rows
+        if (!ChordRegex.IsMatch(header))
+        {
+            return false; // line must be a single chord name
+        }
+        if (index + 6 >= lines.Length)
+        {
+            return false; // need six following rows
+        }
 
         var letters = new char[6];
         var values  = new int[6];
         for (int r = 0; r < 6; r++)
         {
             var m = DiagramRowRegex.Match(lines[index + 1 + r].TrimEnd('\r').Trim());
-            if (!m.Success) return false;
+            if (!m.Success)
+            {
+                return false;
+            }
             letters[r] = char.ToLowerInvariant(m.Groups["string"].Value[0]);
             var f = m.Groups["fret"].Value;
             values[r] = f is "x" or "X" ? -1 : int.Parse(f);
@@ -212,9 +251,18 @@ public class TabViewModel : ViewModelBase
 
         // Map each row to its index in the [E A D G B e] array based on the string ordering.
         int[] order;
-        if (letters.SequenceEqual(['e', 'b', 'g', 'd', 'a', 'e']))      order = [5, 4, 3, 2, 1, 0];
-        else if (letters.SequenceEqual(['e', 'a', 'd', 'g', 'b', 'e'])) order = [0, 1, 2, 3, 4, 5];
-        else return false; // unrecognised string ordering — don't guess
+        if (letters.SequenceEqual(['e', 'b', 'g', 'd', 'a', 'e']))
+        {
+            order = [5, 4, 3, 2, 1, 0];
+        }
+        else if (letters.SequenceEqual(['e', 'a', 'd', 'g', 'b', 'e']))
+        {
+            order = [0, 1, 2, 3, 4, 5];
+        }
+        else
+        {
+            return false; // unrecognised string ordering — don't guess
+        }
 
         var result = new int[6];
         for (int r = 0; r < 6; r++)
@@ -237,24 +285,40 @@ public class TabViewModel : ViewModelBase
             for (int i = 0; i < 6; i++)
             {
                 var c = cleaned[i];
-                if (c is 'x' or 'X')          arr[i] = -1;
-                else if (c is >= '0' and <= '9') arr[i] = c - '0';
-                else return null;
+                if (c is 'x' or 'X')
+                {
+                    arr[i] = -1;
+                }
+                else if (c is >= '0' and <= '9')
+                {
+                    arr[i] = c - '0';
+                }
+                else
+                {
+                    return null;
+                }
             }
             return arr;
         }
 
         // Separated format: "x-0-2-2-1-0" or "x 0 2 2 1 0"
         var parts = cleaned.Split(new[] { '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 6) return null;
+        if (parts.Length != 6)
+        {
+            return null;
+        }
 
         var result = new int[6];
         for (int i = 0; i < 6; i++)
         {
             if (parts[i].Equals("x", StringComparison.OrdinalIgnoreCase))
+            {
                 result[i] = -1;
+            }
             else if (!int.TryParse(parts[i], out result[i]))
+            {
                 return null;
+            }
         }
         return result;
     }
@@ -263,20 +327,31 @@ public class TabViewModel : ViewModelBase
 
     private static IReadOnlyList<TabLine> ParseLines(string? text)
     {
-        if (string.IsNullOrEmpty(text)) return [];
+        if (string.IsNullOrEmpty(text))
+        {
+            return [];
+        }
         var lines = new List<TabLine>();
         foreach (var raw in text.Split('\n'))
         {
             var line = raw.TrimEnd('\r');
             TabLineKind kind;
             if (string.IsNullOrWhiteSpace(line))
+            {
                 kind = TabLineKind.Blank;
+            }
             else if (line.Length > 1 && line[1] == '|')
+            {
                 kind = TabLineKind.TabString;
+            }
             else if (line.TrimEnd().EndsWith(':') && line.Length < 25 && !line.Contains('|'))
+            {
                 kind = TabLineKind.Section;
+            }
             else if (MetadataLineRegex.IsMatch(line))
+            {
                 kind = TabLineKind.Lyric;
+            }
             else
             {
                 var tokens     = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -291,9 +366,14 @@ public class TabViewModel : ViewModelBase
 
     public void ReloadTab()
     {
-        if (Id == null || _library == null) return;
+        if (Id == null || _library == null)
+        {
+            return;
+        }
         var savedTab = _library.Get(Id.Value);
         if (savedTab != null)
+        {
             Tab = savedTab;
+        }
     }
 }

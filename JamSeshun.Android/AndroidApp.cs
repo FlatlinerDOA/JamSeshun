@@ -31,7 +31,9 @@ public class AndroidApp : AvaloniaAndroidApplication<App>
             .AfterSetup(_ =>
             {
                 if (App.Current?.ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+                {
                     singleView.MainView = App.ServiceProvider.GetKeyedService<Control>("MainView");
+                }
             });
     }
 }

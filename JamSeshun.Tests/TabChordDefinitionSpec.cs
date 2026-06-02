@@ -127,7 +127,10 @@ public class TabChordDefinitionSpec
     public void RealFile_Jackdaw_DiagramDefinesDF()
     {
         var path = Path.Combine(WikiTabDir, "David Gray - Jackdaw V1.Chords.txt");
-        if (!File.Exists(path)) return; // not available in CI
+        if (!File.Exists(path))
+        {
+            return; // not available in CI
+        }
 
         Assert.Equal([2, -1, 0, 2, 3, -1], FretsOf(File.ReadAllText(path), "D/F#"));
     }
@@ -136,7 +139,10 @@ public class TabChordDefinitionSpec
     public void RealFile_LateNightRadio_BracketlessBlockParses()
     {
         var path = Path.Combine(WikiTabDir, "David Gray - Late Night Radio V2.Chords.txt");
-        if (!File.Exists(path)) return; // not available in CI
+        if (!File.Exists(path))
+        {
+            return; // not available in CI
+        }
 
         var content = File.ReadAllText(path);
         Assert.Equal([-1, 0, 2, 2, 1, 0], FretsOf(content, "Am"));

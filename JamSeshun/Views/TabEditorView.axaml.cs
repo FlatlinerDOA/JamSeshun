@@ -20,7 +20,10 @@ public partial class TabEditorView : UserControl
                 vm.Deleted += async () =>
                 {
                     var nav = this.FindAncestorOfType<NavigationPage>();
-                    if (nav == null) return;
+                    if (nav == null)
+                    {
+                        return;
+                    }
                     await nav.PopAsync(); // editor → tab viewer
                     await nav.PopAsync(); // tab viewer → songs list
                 };
@@ -32,6 +35,8 @@ public partial class TabEditorView : UserControl
     {
         var nav = this.FindAncestorOfType<NavigationPage>();
         if (nav != null)
+        {
             await nav.PopAsync();
+        }
     }
 }

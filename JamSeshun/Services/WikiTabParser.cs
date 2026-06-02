@@ -53,14 +53,23 @@ public static class WikiTabParser
             // Strip extension and any trailing ".something" type suffix, then split on " - ".
             var stem = Path.GetFileNameWithoutExtension(fileName);
             var dotIdx = stem.LastIndexOf('.');
-            if (dotIdx > 0) stem = stem[..dotIdx];
+            if (dotIdx > 0)
+            {
+                stem = stem[..dotIdx];
+            }
 
             var dash = stem.IndexOf(" - ", StringComparison.Ordinal);
-            if (dash < 0) return null;
+            if (dash < 0)
+            {
+                return null;
+            }
 
             artist = stem[..dash].Trim();
             song   = stem[(dash + 3)..].Trim();
-            if (string.IsNullOrEmpty(song)) return null;
+            if (string.IsNullOrEmpty(song))
+            {
+                return null;
+            }
         }
 
         var (tuning, capo) = ParseMetadata(content);
@@ -99,13 +108,21 @@ public static class WikiTabParser
             if (capoMatch.Success)
             {
                 if (capoMatch.Groups["none"].Success)
+                {
                     capo = 0;
+                }
                 else if (capoMatch.Groups["num"].Success)
+                {
                     int.TryParse(capoMatch.Groups["num"].Value, out capo);
+                }
                 else if (capoMatch.Groups["ordword"].Success)
+                {
                     capo = ParseOrdinal(capoMatch.Groups["ordword"].Value);
+                }
                 else if (capoMatch.Groups["ordword2"].Success)
+                {
                     capo = ParseOrdinal(capoMatch.Groups["ordword2"].Value);
+                }
                 continue;
             }
 

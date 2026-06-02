@@ -94,7 +94,10 @@ public class TabChordParsingSpec
         foreach (var line in File.ReadLines(path))
         {
             var chord = line.Trim();
-            if (chord.Length == 0 || chord.StartsWith('#')) continue;
+            if (chord.Length == 0 || chord.StartsWith('#'))
+            {
+                continue;
+            }
             yield return [chord];
         }
     }

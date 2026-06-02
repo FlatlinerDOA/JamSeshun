@@ -79,8 +79,14 @@ public sealed class TunerViewModel : ViewModelBase
 
     private void ToggleStartStop()
     {
-        if (IsRunning) Stop();
-        else Start();
+        if (IsRunning)
+        {
+            Stop();
+        }
+        else
+        {
+            Start();
+        }
     }
 
     private void Stop()
@@ -94,10 +100,16 @@ public sealed class TunerViewModel : ViewModelBase
 
     private void Start()
     {
-        if (tuningService == null || IsRunning) return;
+        if (tuningService == null || IsRunning)
+        {
+            return;
+        }
 
         var device = SelectedDevice;
-        if (device == null) return;
+        if (device == null)
+        {
+            return;
+        }
 
         // Share one capture stream between the live diagnostics readout and the
         // (slower) stabilized note detection so only a single recorder is opened.
@@ -110,7 +122,10 @@ public sealed class TunerViewModel : ViewModelBase
             frames.ObserveOn(AvaloniaScheduler.Instance).Subscribe(f =>
             {
                 SignalLevel = f.SignalLevel;
-                if (f.EstimatedFrequency > 0) RawFrequency = f.EstimatedFrequency;
+                if (f.EstimatedFrequency > 0)
+                {
+                    RawFrequency = f.EstimatedFrequency;
+                }
             }),
 
             // Stabilized note: confidence-gated, hysteresis-smoothed over 300ms windows.
@@ -185,7 +200,10 @@ public sealed class TunerViewModel : ViewModelBase
 
     private void SetTargetString(int index, float cents)
     {
-        if (targetStringIndex == index && Math.Abs(targetStringCents - cents) < 0.5f) return;
+        if (targetStringIndex == index && Math.Abs(targetStringCents - cents) < 0.5f)
+        {
+            return;
+        }
         targetStringIndex = index;
         targetStringCents = cents;
         OnPropertyChanged(nameof(TuningStrings));
@@ -278,7 +296,11 @@ public sealed class TunerViewModel : ViewModelBase
     public GuitarTuning? SelectedPredefinedTuning
     {
         get => AvailableTunings.Contains(targetTuning) ? targetTuning : null;
-        set { if (value != null) TargetTuning = value; }
+        set { if (value != null)
+            {
+                TargetTuning = value;
+            }
+        }
     }
 
     public bool HasTargetTuning => targetTuning != null;
@@ -310,7 +332,9 @@ public sealed class TunerViewModel : ViewModelBase
         lockedStringIndex = lockedStringIndex == index ? -1 : index;
         // Immediately mark the locked string as active so the pill updates before the next audio frame.
         if (lockedStringIndex >= 0)
+        {
             targetStringIndex = lockedStringIndex;
+        }
         OnPropertyChanged(nameof(TuningStrings));
     }
 

@@ -6,11 +6,18 @@ namespace JamSeshun.ViewModels;
 
 public class TabViewModel : ViewModelBase
 {
+    private readonly TabLibraryService? _library;
+
     public TabViewModel() { }
 
     public TabViewModel(SavedTab tab)
     {
         _tab = tab;
+    }
+
+    public TabViewModel(TabLibraryService? library)
+    {
+        _library = library;
     }
 
     public Guid? Id { get; set; }
@@ -212,5 +219,13 @@ public class TabViewModel : ViewModelBase
             lines.Add(new TabLine(kind, line));
         }
         return lines;
+    }
+
+    public void ReloadTab()
+    {
+        if (Id == null || _library == null) return;
+        var savedTab = _library.Get(Id.Value);
+        if (savedTab != null)
+            Tab = savedTab;
     }
 }

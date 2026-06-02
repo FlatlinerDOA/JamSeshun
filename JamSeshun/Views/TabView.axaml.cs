@@ -34,6 +34,8 @@ public partial class TabView : UserControl
             var contentPage = new ContentPage { Content = editorView };
             NavigationPage.SetHasNavigationBar(contentPage, false);
 
+            editorVm.Saved += () => tabVm.ReloadTab();
+
             await nav.PushAsync(contentPage);
         };
 

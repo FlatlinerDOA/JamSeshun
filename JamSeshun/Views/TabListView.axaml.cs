@@ -40,7 +40,8 @@ public partial class TabListView : UserControl
         var navPage = this.FindAncestorOfType<NavigationPage>();
         if (navPage == null) return;
 
-        var vm = new TabViewModel();
+        var library = App.ServiceProvider.GetRequiredService<TabLibraryService>();
+        var vm = new TabViewModel(library);
         var tabView = new TabView { DataContext = vm };
         var contentPage = new ContentPage { Content = tabView };
         NavigationPage.SetHasNavigationBar(contentPage, false);

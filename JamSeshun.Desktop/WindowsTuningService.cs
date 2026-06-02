@@ -64,7 +64,10 @@ internal class WindowsTuningService : ITuningService
                             while (buffered.BufferedBytes / bytesPerSample >= pitchDetector.SampleBufferSize)
                             {
                                 var samplesRead = sampleProvider.Read(sampleBuffer, 0, pitchDetector.SampleBufferSize);
-                                if (samplesRead != pitchDetector.SampleBufferSize) break;
+                                if (samplesRead != pitchDetector.SampleBufferSize)
+                                {
+                                    break;
+                                }
 
                                 // Emit every frame (pitched or not) so the UI can show
                                 // the live signal level; the view model decides what to display.

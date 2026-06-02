@@ -32,9 +32,7 @@ class Program
             {
                 TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
                 AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-                ITuningService tuningService = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                    ? new WindowsTuningService()
-                    : new LinuxTuningService();
+                ITuningService tuningService = new SoundFlowTuningService();
                 services.AddSingleton<ITuningService>(tuningService);
             })
             .UsePlatformDetect()

@@ -137,12 +137,8 @@
                                  Foreground="#94a3b8"
                                  FontSize="13" />
                     </StackPanel>
-                    <TextBlock Grid.Column="1"
-                               Text="›"
-                               Foreground="#475569"
-                               FontSize="20"
-                               VerticalAlignment="Center"
-                               Margin="8,0,0,0" />
+                    <i:Icon Grid.Column="1" Value="fa-solid fa-caret-right" FontSize="15" Foreground="#475569" VerticalAlignment="Center"
+                            Margin="8,0,0,0"/>
                   </Grid>
                 </Border>
               </DataTemplate>
@@ -183,12 +179,9 @@
                                  Foreground="#94a3b8"
                                  FontSize="13" />
                     </StackPanel>
-                    <TextBlock Grid.Column="1"
-                               Text="›"
-                               Foreground="#475569"
-                               FontSize="20"
-                               VerticalAlignment="Center"
-                               Margin="8,0,0,0" />
+                    <i:Icon Grid.Column="1" Value="fa-solid fa-caret-right" FontSize="15" Foreground="#475569" VerticalAlignment="Center"
+                            Margin="8,0,0,0"/>
+
                   </Grid>
                 </Border>
               </DataTemplate>

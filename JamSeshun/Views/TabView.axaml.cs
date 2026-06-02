@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.VisualTree;
+using JamSeshun.Services.Tuning;
 using JamSeshun.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,6 +35,21 @@ public partial class TabView : UserControl
             NavigationPage.SetHasNavigationBar(contentPage, false);
 
             await nav.PushAsync(contentPage);
+        };
+
+        TuneButton.Click += (_, _) =>
+        {
+            var tabVm = DataContext as TabViewModel;
+            var tuning = GuitarTuning.TryParse(tabVm?.Tab?.Tuning);
+            if (tuning == null) return;
+
+            var mainView = this.FindAncestorOfType<MainView>();
+            if (mainView?.DataContext is MainViewModel mainVm)
+                mainVm.TunerVM.TargetTuning = tuning;
+
+            var tabbedPage = this.FindAncestorOfType<TabbedPage>();
+            if (tabbedPage != null)
+                tabbedPage.SelectedIndex = 0;
         };
     }
 }

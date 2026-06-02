@@ -9,6 +9,7 @@ A personal guitar utility app for tuning and browsing guitar tabs. Share sheet m
   - Autocorrelation-based pitch detection (robust at low frequencies)
   - Stabilized pitch output with 300ms buffers
   - Cross-platform support (Windows, Android)
+  - Non-standard Tuning - When a tab specifies a tuning (e.g. Drop D, DADGAD, Open G), tap "· Tune" in the tab header to switch directly to the tuner with a per-string guide showing which string is active and when it's in tune
   
 - **Guitar Tab Browser & Viewer** — Browse and display guitar tabs
   - Fetch tabs from online sources
@@ -20,8 +21,8 @@ A personal guitar utility app for tuning and browsing guitar tabs. Share sheet m
   - Basic text editor for importin.
   - Import a bunch of tab / chord files from your HDD, Phone, Google Drive, One Drive etc.
 
+
 ### 📋 Planned / Not Yet Started
-- **Non-standard Tuning** — Tap a tune from a tab to start the Tuner with the custom tuning.
 - **Performance Mode** — Perform a tab so that it is readable from a distance, chords + lyrics follow as you play.
 - **Multi-user Collaboration** — Share tabs and perform together in sync
 - **Network Features** — Find peers on same network or via share link

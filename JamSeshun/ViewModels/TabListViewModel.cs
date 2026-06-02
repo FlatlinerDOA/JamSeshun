@@ -15,7 +15,11 @@ public partial class TabListViewModel : ViewModelBase
 
     public TabListViewModel()
     {
-        SearchResults.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasSearchResults));
+        SearchResults.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasSearchResults));
+            OnPropertyChanged(nameof(HasNoResults));
+        };
     }
 
     public TabListViewModel(TabLibraryService library) : this()
@@ -49,8 +53,19 @@ public partial class TabListViewModel : ViewModelBase
     public string SearchQuery
     {
         get => searchQuery;
-        set { SetProperty(ref searchQuery, value); FilterResults(); }
+        set
+        {
+            if (SetProperty(ref searchQuery, value))
+            {
+                FilterResults();
+                OnPropertyChanged(nameof(IsSearching));
+                OnPropertyChanged(nameof(HasNoResults));
+            }
+        }
     }
+
+    public bool IsSearching    => !string.IsNullOrWhiteSpace(searchQuery);
+    public bool HasNoResults   => IsSearching && !HasSearchResults;
 
     public TabReferenceViewModel? SelectedTabReference
     {

@@ -27,6 +27,18 @@ public class WikiTabParserSpec
         Assert.Null(WikiTabParser.Parse("NoDashSeparator V1.Chords.txt", string.Empty));
     }
 
+    [Theory]
+    [InlineData("Foo Fighters - Everlong.txt",       "Foo Fighters", "Everlong")]
+    [InlineData("Led Zeppelin - Rain Song.txt",       "Led Zeppelin", "Rain Song")]
+    [InlineData("Artist - Song.Chords.txt",           "Artist",       "Song")]
+    public void Parse_FallbackFilename_ExtractsArtistAndSong(string filename, string expectedArtist, string expectedSong)
+    {
+        var result = WikiTabParser.Parse(filename, string.Empty);
+        Assert.NotNull(result);
+        Assert.Equal(expectedArtist, result.Artist);
+        Assert.Equal(expectedSong,   result.Song);
+    }
+
     // ── Capo extraction ─────────────────────────────────────────────────────
 
     [Theory]

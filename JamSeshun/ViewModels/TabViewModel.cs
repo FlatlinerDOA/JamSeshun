@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using JamSeshun.Services;
+using JamSeshun.Services.Tuning;
 
 namespace JamSeshun.ViewModels;
 
@@ -27,6 +28,8 @@ public class TabViewModel : ViewModelBase
             OnPropertyChanged(nameof(Song));
             OnPropertyChanged(nameof(TuningDisplay));
             OnPropertyChanged(nameof(HasTuning));
+            OnPropertyChanged(nameof(HasParsableTuning));
+            OnPropertyChanged(nameof(HasTuningDisplayOnly));
             OnPropertyChanged(nameof(Chords));
             OnPropertyChanged(nameof(HasChords));
             OnPropertyChanged(nameof(Lines));
@@ -51,6 +54,8 @@ public class TabViewModel : ViewModelBase
     }
 
     public bool HasTuning => !string.IsNullOrEmpty(TuningDisplay);
+    public bool HasParsableTuning => GuitarTuning.TryParse(_tab?.Tuning) != null;
+    public bool HasTuningDisplayOnly => HasTuning && !HasParsableTuning;
     public IReadOnlyList<Chord> Chords => ParseChords(_tab?.Content);
     public bool HasChords => Chords.Count > 0;
     public IReadOnlyList<TabLine> Lines => ParseLines(_tab?.Content);

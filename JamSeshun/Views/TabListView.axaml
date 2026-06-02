@@ -150,8 +150,16 @@
           </ListBox>
         </StackPanel>
 
-        <!-- My Tabs -->
-        <StackPanel IsVisible="{Binding !HasSearchResults}">
+        <!-- No results -->
+        <TextBlock Text="No results"
+                   IsVisible="{Binding HasNoResults}"
+                   Foreground="#475569"
+                   FontSize="14"
+                   HorizontalAlignment="Center"
+                   Margin="0,40,0,0" />
+
+        <!-- My Tabs (shown only when not searching) -->
+        <StackPanel IsVisible="{Binding !IsSearching}">
           <TextBlock Text="MY TABS"
                      Margin="16,14,16,6"
                      FontSize="11"

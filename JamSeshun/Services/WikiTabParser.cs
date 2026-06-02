@@ -13,9 +13,21 @@ public static class WikiTabParser
         @"^\s*capo\s*:?\s*(?:\((?<none>none)\)|on\s+(?:the\s+)?(?<ordword>\w+)\s+fret|(?<ordword2>\w+)\s+fret|(?<num>\d+))",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    // Matches note names like "E A D G B E" or "Eb Ab Db Gb Bb Eb".
+    // Captures an optional word prefix ("Studio", "Live", "Standard", …) for priority ranking.
     private static readonly Regex TuningRegex = new(
-        @"^\s*(?:standard\s+)?tuning\s*:\s*(?<tuning>[A-Ga-g#b ]+)",
+        @"^\s*(?:(?<prefix>\w+)\s+)?tuning\s*:\s*(?<tuning>(?:[A-G][#b]?\s+)*[A-G][#b]?)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    // Lower number = higher priority. "Studio Tuning:" wins over a bare "Tuning:".
+    private static int TuningPriority(string prefix) => prefix.ToLowerInvariant() switch
+    {
+        "studio"   => 0,
+        "standard" => 1,
+        ""         => 1,
+        "live"     => 2,
+        _          => 1,
+    };
 
     /// <summary>Parses a WikiTab .txt file into a SavedTab. Returns null if the filename doesn't match the expected pattern.</summary>
     public static SavedTab? ParseFile(string filePath)
@@ -27,11 +39,29 @@ public static class WikiTabParser
     /// <summary>Parses a filename + raw content into a SavedTab.</summary>
     public static SavedTab? Parse(string fileName, string content)
     {
-        var m = FilenameRegex.Match(fileName);
-        if (!m.Success) return null;
+        string artist, song;
 
-        var artist = m.Groups["artist"].Value.Trim();
-        var song   = m.Groups["song"].Value.Trim();
+        var m = FilenameRegex.Match(fileName);
+        if (m.Success)
+        {
+            artist = m.Groups["artist"].Value.Trim();
+            song   = m.Groups["song"].Value.Trim();
+        }
+        else
+        {
+            // Fallback: accept "Artist - Song.txt" (no version/type suffix).
+            // Strip extension and any trailing ".something" type suffix, then split on " - ".
+            var stem = Path.GetFileNameWithoutExtension(fileName);
+            var dotIdx = stem.LastIndexOf('.');
+            if (dotIdx > 0) stem = stem[..dotIdx];
+
+            var dash = stem.IndexOf(" - ", StringComparison.Ordinal);
+            if (dash < 0) return null;
+
+            artist = stem[..dash].Trim();
+            song   = stem[(dash + 3)..].Trim();
+            if (string.IsNullOrEmpty(song)) return null;
+        }
 
         var (tuning, capo) = ParseMetadata(content);
         return new SavedTab(artist, song, content, tuning, capo, DateTimeOffset.Now);
@@ -56,8 +86,9 @@ public static class WikiTabParser
 
     private static (string Tuning, int Capo) ParseMetadata(string content)
     {
-        var tuning = string.Empty;
-        var capo = 0;
+        var tuning         = string.Empty;
+        var tuningPriority = int.MaxValue;
+        var capo           = 0;
 
         // Only scan the first 25 lines — metadata is always in the header.
         foreach (var raw in content.Split('\n').Take(25))
@@ -81,8 +112,13 @@ public static class WikiTabParser
             var tuningMatch = TuningRegex.Match(line);
             if (tuningMatch.Success)
             {
-                tuning = tuningMatch.Groups["tuning"].Value.Trim();
-                continue;
+                var prefix   = tuningMatch.Groups["prefix"].Value.Trim();
+                var priority = TuningPriority(prefix);
+                if (priority < tuningPriority)
+                {
+                    tuning         = tuningMatch.Groups["tuning"].Value.Trim();
+                    tuningPriority = priority;
+                }
             }
         }
 

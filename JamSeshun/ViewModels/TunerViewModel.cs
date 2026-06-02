@@ -6,6 +6,8 @@ using JamSeshun.Services.Tuning;
 
 namespace JamSeshun.ViewModels;
 
+public record TuningStringDisplay(int Index, string NoteName, bool IsActive, bool IsInTune, bool IsLocked);
+
 public sealed class TunerViewModel : ViewModelBase
 {
     private readonly ITuningService? tuningService;
@@ -17,10 +19,25 @@ public sealed class TunerViewModel : ViewModelBase
     private float confidence;
     private string currentNote = string.Empty;
     private AudioCaptureDevice? selectedDevice;
+    private GuitarTuning? targetTuning = GuitarTuning.Standard;
+    private int targetStringIndex = -1;
+    private float targetStringCents;
+    private int lockedStringIndex = -1;
+
+    public static IReadOnlyList<GuitarTuning> AvailableTunings { get; } =
+    [
+        GuitarTuning.Standard,
+        GuitarTuning.DropD,
+        GuitarTuning.Dadgad,
+        GuitarTuning.OpenG,
+        GuitarTuning.OpenD,
+        GuitarTuning.EbStandard,
+    ];
 
     public TunerViewModel()
     {
-        this.StartCommand = new RelayCommand(ToggleStartStop);
+        this.StartCommand      = new RelayCommand(ToggleStartStop);
+        this.ClearTuningCommand = new RelayCommand(() => TargetTuning = null);
     }
 
     public TunerViewModel(ITuningService tuningService) : this()
@@ -113,9 +130,19 @@ public sealed class TunerViewModel : ViewModelBase
         {
             this.CurrentNote = pitch.Note.ToString();
             this.CurrentFrequency = pitch.Frequency;
-            this.CurrentErrorInCents = pitch.ErrorInCents;
+
+            // Update the target string first so targetStringCents is fresh.
+            UpdateTargetString(pitch.Frequency);
+
+            // In guide mode use the target-string error for the needle; in chromatic
+            // mode use the nearest-semitone error as before.
+            float centsError = (targetTuning != null && targetStringIndex >= 0)
+                ? targetStringCents
+                : pitch.ErrorInCents;
+
+            this.CurrentErrorInCents = centsError;
             // Map ±50 cents to ±55° from vertical for the gauge needle.
-            this.CurrentErrorInDegrees = (float)(Math.Max(-50, Math.Min(50, pitch.ErrorInCents)) / 50.0 * 55.0);
+            this.CurrentErrorInDegrees = (float)(Math.Max(-50, Math.Min(50, centsError)) / 50.0 * 55.0);
         }
         else
         {
@@ -124,7 +151,44 @@ public sealed class TunerViewModel : ViewModelBase
             this.CurrentFrequency = 0;
             this.CurrentErrorInCents = 0;
             this.CurrentErrorInDegrees = 0;
+            SetTargetString(-1, 0f);
         }
+    }
+
+    private void UpdateTargetString(float freq)
+    {
+        if (targetTuning == null) { SetTargetString(-1, 0f); return; }
+
+        if (lockedStringIndex >= 0)
+        {
+            // Locked: always measure error against the pinned string.
+            var note = targetTuning.Strings[lockedStringIndex];
+            float f = freq;
+            while (f > note.Frequency * 1.5f) f /= 2f;
+            while (f < note.Frequency / 1.5f) f *= 2f;
+            SetTargetString(lockedStringIndex, (float)(1200.0 * Math.Log2(f / note.Frequency)));
+            return;
+        }
+
+        var best = targetTuning.Strings
+            .Select((note, i) =>
+            {
+                float f = freq;
+                while (f > note.Frequency * 1.5f) f /= 2f;
+                while (f < note.Frequency / 1.5f) f *= 2f;
+                return (i, cents: (float)(1200.0 * Math.Log2(f / note.Frequency)));
+            })
+            .MinBy(x => Math.Abs(x.cents));
+
+        SetTargetString(best.i, best.cents);
+    }
+
+    private void SetTargetString(int index, float cents)
+    {
+        if (targetStringIndex == index && Math.Abs(targetStringCents - cents) < 0.5f) return;
+        targetStringIndex = index;
+        targetStringCents = cents;
+        OnPropertyChanged(nameof(TuningStrings));
     }
 
     public float CurrentFrequency
@@ -188,5 +252,68 @@ public sealed class TunerViewModel : ViewModelBase
     public string StartButtonText => isRunning ? "Stop" : "Start Tuning";
     public string DiagnosticsDisplay => $"level {signalLevel:F3}   ·   raw {(rawFrequency > 0 ? $"{rawFrequency:F0} Hz" : "—")}";
 
+    public GuitarTuning? TargetTuning
+    {
+        get => targetTuning;
+        set
+        {
+            if (SetProperty(ref targetTuning, value))
+            {
+                OnPropertyChanged(nameof(HasTargetTuning));
+                OnPropertyChanged(nameof(TargetTuningName));
+                OnPropertyChanged(nameof(TuningPickerPlaceholder));
+                OnPropertyChanged(nameof(TuningStrings));
+                // Sync the ComboBox selection: only highlight the item when the tuning
+                // is one of the predefined entries; custom tunings (from tabs) leave the
+                // ComboBox at null/placeholder without resetting TargetTuning.
+                OnPropertyChanged(nameof(SelectedPredefinedTuning));
+                lockedStringIndex = -1;
+                SetTargetString(-1, 0f);
+            }
+        }
+    }
+
+    // Bound to the tuning ComboBox (two-way). Only covers predefined tunings.
+    // Setting it to null does NOT clear TargetTuning — that requires ClearTuningCommand.
+    public GuitarTuning? SelectedPredefinedTuning
+    {
+        get => AvailableTunings.Contains(targetTuning) ? targetTuning : null;
+        set { if (value != null) TargetTuning = value; }
+    }
+
+    public bool HasTargetTuning => targetTuning != null;
+    public string TargetTuningName => targetTuning?.Name ?? string.Empty;
+
+    // Shown in the ComboBox when no predefined item is selected.
+    // Displays the custom tuning name (e.g. "D G C G C D") rather than "Chromatic".
+    public string TuningPickerPlaceholder => HasTargetTuning
+        ? TargetTuningName
+        : "Chromatic  (no guide)";
+
+    public IReadOnlyList<TuningStringDisplay> TuningStrings
+    {
+        get
+        {
+            var tuning = targetTuning ?? GuitarTuning.Standard;
+            return tuning.Strings.Select((note, i) =>
+            {
+                bool isLocked = i == lockedStringIndex;
+                bool isActive = i == targetStringIndex;
+                bool isInTune = isActive && Math.Abs(targetStringCents) <= 15f;
+                return new TuningStringDisplay(i, note.Name, isActive, isInTune, isLocked);
+            }).ToList();
+        }
+    }
+
+    public void ToggleLockString(int index)
+    {
+        lockedStringIndex = lockedStringIndex == index ? -1 : index;
+        // Immediately mark the locked string as active so the pill updates before the next audio frame.
+        if (lockedStringIndex >= 0)
+            targetStringIndex = lockedStringIndex;
+        OnPropertyChanged(nameof(TuningStrings));
+    }
+
     public RelayCommand StartCommand { get; }
+    public RelayCommand ClearTuningCommand { get; }
 }

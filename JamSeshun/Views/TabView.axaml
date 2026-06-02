@@ -61,9 +61,22 @@
           <TextBlock Text="{Binding Artist}"
                      FontSize="14" Foreground="#94a3b8"
                      TextTrimming="CharacterEllipsis" />
+          <Button x:Name="TuneButton"
+                  Background="Transparent" BorderThickness="0"
+                  Padding="0" Margin="0,2,0,0"
+                  Cursor="Hand"
+                  IsVisible="{Binding HasParsableTuning}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Text="{Binding TuningDisplay}"
+                         FontSize="12" Foreground="#7fc0f4" />
+              <TextBlock Text="· Tune"
+                         FontSize="11" Foreground="#4a7fc0" />
+            </StackPanel>
+          </Button>
+          <!-- Capo-only or unrecognised tuning display -->
           <TextBlock Text="{Binding TuningDisplay}"
                      FontSize="12" Foreground="#7fc0f4"
-                     IsVisible="{Binding HasTuning}"
+                     IsVisible="{Binding HasTuningDisplayOnly}"
                      Margin="0,2,0,0" />
         </StackPanel>
         <Button Grid.Column="2"

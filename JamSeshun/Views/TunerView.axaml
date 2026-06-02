@@ -4,6 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:JamSeshun.ViewModels"
              xmlns:views="using:JamSeshun.Views"
+             xmlns:tuning="using:JamSeshun.Services.Tuning"
+             xmlns:i="https://github.com/projektanker/icons.avalonia"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
              x:DataType="vm:TunerViewModel"
              x:Class="JamSeshun.Views.TunerView"
@@ -30,28 +32,125 @@
       <Setter Property="Foreground" Value="#e2e8f0" />
       <Setter Property="BorderBrush" Value="#334155" />
     </Style>
+    <!-- String guide pill styles -->
+    <Style Selector="Border.string-pip">
+      <Setter Property="Background" Value="#0f172a" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="#1e293b" />
+      <Setter Property="CornerRadius" Value="20" />
+      <Setter Property="MinWidth" Value="42" />
+      <Setter Property="Padding" Value="10,6" />
+    </Style>
+    <Style Selector="Border.string-pip TextBlock">
+      <Setter Property="Foreground" Value="#475569" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.string-pip.active">
+      <Setter Property="Background" Value="#1e3a5f" />
+      <Setter Property="BorderBrush" Value="#4a7fc0" />
+    </Style>
+    <Style Selector="Border.string-pip.active TextBlock">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <!-- Locked: amber — overrides active/blue; defined after active so it wins -->
+    <Style Selector="Border.string-pip.locked">
+      <Setter Property="Background" Value="#1c1200" />
+      <Setter Property="BorderBrush" Value="#f59e0b" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Border.string-pip.locked TextBlock">
+      <Setter Property="Foreground" Value="#f59e0b" />
+    </Style>
+    <!-- In-tune: green — defined last so it overrides both active and locked -->
+    <Style Selector="Border.string-pip.in-tune">
+      <Setter Property="Background" Value="#14532d" />
+      <Setter Property="BorderBrush" Value="#4ade80" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Border.string-pip.in-tune TextBlock">
+      <Setter Property="Foreground" Value="#4ade80" />
+    </Style>
   </UserControl.Styles>
 
   <DockPanel>
 
-    <!-- ── Input device picker ────────────────────────────── -->
+    <!-- ── Header: device + tuning pickers ─────────────────── -->
     <Border DockPanel.Dock="Top" Background="#0f172a" Padding="12,10">
-      <DockPanel>
-        <TextBlock DockPanel.Dock="Top"
-                   Text="INPUT DEVICE"
-                   FontSize="10" FontWeight="SemiBold"
-                   Foreground="#64748b"
-                   Margin="2,0,0,4" />
-        <ComboBox ItemsSource="{Binding Devices}"
-                  SelectedItem="{Binding SelectedDevice}"
-                  HorizontalAlignment="Stretch">
-          <ComboBox.ItemTemplate>
-            <DataTemplate>
-              <TextBlock Text="{Binding Name}" />
+      <StackPanel Spacing="12">
+
+        <!-- Input device -->
+        <StackPanel>
+          <TextBlock Text="INPUT DEVICE"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#64748b" Margin="2,0,0,4" />
+          <ComboBox ItemsSource="{Binding Devices}"
+                    SelectedItem="{Binding SelectedDevice}"
+                    HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+
+        <!-- Tuning -->
+        <StackPanel>
+          <TextBlock Text="TUNING"
+                     FontSize="10" FontWeight="SemiBold"
+                     Foreground="#64748b" Margin="2,0,0,4" />
+          <Grid ColumnDefinitions="*,Auto">
+            <ComboBox Grid.Column="0"
+                      ItemsSource="{Binding AvailableTunings}"
+                      SelectedItem="{Binding SelectedPredefinedTuning}"
+                      PlaceholderText="{Binding TuningPickerPlaceholder}"
+                      HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="tuning:GuitarTuning">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Grid.Column="1"
+                    Command="{Binding ClearTuningCommand}"
+                    IsVisible="{Binding HasTargetTuning}"
+                    Background="Transparent" BorderThickness="0"
+                    Padding="10,0" Margin="4,0,0,0"
+                    VerticalAlignment="Center"
+                    ToolTip.Tip="Clear tuning">
+              <i:Icon Value="fa-solid fa-xmark" FontSize="14" Foreground="#64748b" />
+            </Button>
+          </Grid>
+        </StackPanel>
+
+      </StackPanel>
+    </Border>
+
+    <!-- ── String guide (visible when a target tuning is set) ─ -->
+    <Border DockPanel.Dock="Top"
+            Background="#0a0f1e"
+            Padding="12,8"
+            IsVisible="{Binding HasTargetTuning}">
+      <ItemsControl x:Name="StringGuide" ItemsSource="{Binding TuningStrings}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="6" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TuningStringDisplay">
+              <Border Classes="string-pip"
+                      Classes.active="{Binding IsActive}"
+                      Classes.locked="{Binding IsLocked}"
+                      Classes.in-tune="{Binding IsInTune}"
+                      Cursor="Hand">
+                <TextBlock Text="{Binding NoteName}" />
+              </Border>
             </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-      </DockPanel>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Border>
 
     <!-- ── Note display (fades when confidence is low) ────── -->

@@ -29,4 +29,10 @@
     <ProjectReference Include="..\JamSeshun\JamSeshun.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Tabs\**\*.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

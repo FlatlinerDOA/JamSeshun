@@ -5,8 +5,8 @@ namespace JamSeshun.Services.Tuning;
 
 public sealed class BitStreamAutoCorrelatedPitchDetector : IPitchDetector
 {
-    private const float minimumFrequency = 75f; //50.0f;
-    private const float maximumFrequency = 335.0f; //500.0f;
+    private const float MinimumFrequency = 75f; //50.0f;
+    private const float MaximumFrequency = 335.0f; //500.0f;
     private readonly int sampleRate;
     private readonly float minPeriod;
     private readonly float maxPeriod;
@@ -16,8 +16,8 @@ public sealed class BitStreamAutoCorrelatedPitchDetector : IPitchDetector
     public BitStreamAutoCorrelatedPitchDetector(int sampleRate)
     {
         this.sampleRate = sampleRate;
-        this.minPeriod = (float)this.sampleRate / maximumFrequency;
-        this.maxPeriod = (float)this.sampleRate / minimumFrequency;
+        this.minPeriod = (float)this.sampleRate / MaximumFrequency;
+        this.maxPeriod = (float)this.sampleRate / MinimumFrequency;
         this.SampleBufferSize = ((int)Math.Ceiling(this.maxPeriod)).SmallestPow2() * 2;
     }
 
@@ -26,8 +26,8 @@ public sealed class BitStreamAutoCorrelatedPitchDetector : IPitchDetector
         Debug.Assert(signal.Length == this.SampleBufferSize, $"Bad buffer size of {signal.Length}, expected {this.SampleBufferSize}.");
         var zeroCrosses = ZeroCrossingBits(signal);
         var correlations = new BitStreamAcf(zeroCrosses);
-        var estimatedFrequency = ProcessHarmonics(correlations);
-        var n = Note.GetClosestNote(estimatedFrequency, minimumFrequency, maximumFrequency);
+        var estimatedFrequency = this.ProcessHarmonics(correlations);
+        var n = Note.GetClosestNote(estimatedFrequency, MinimumFrequency, MaximumFrequency);
         return new DetectedPitch(estimatedFrequency, n, n.GetCentsError(estimatedFrequency));
     }
 

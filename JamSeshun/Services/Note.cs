@@ -34,7 +34,7 @@ namespace JamSeshun.Services
         }
 
         const double AFrequency = 440;
-        static double ToneStep = Math.Pow(2, 1.0 / 12);
+        static double _toneStep = Math.Pow(2, 1.0 / 12);
 
         public static Note GetClosestNote(float estimatedFrequency, float minimumFrequency = 50, float maximumFrequency = 500) =>
             estimatedFrequency <= 0.0f ? default : AllNotes.Where(n => n.Frequency >= minimumFrequency && n.Frequency <= maximumFrequency).MinBy(note => Math.Abs(note.Frequency - estimatedFrequency));
@@ -42,7 +42,7 @@ namespace JamSeshun.Services
 
         private double GetToneStep(double frequency)
         {
-            return Math.Log(frequency / AFrequency, ToneStep);
+            return Math.Log(frequency / AFrequency, _toneStep);
         }
 
         public Note ShiftOctave(int octave) => this.Octave switch

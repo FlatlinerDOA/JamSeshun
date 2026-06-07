@@ -7,5 +7,5 @@ namespace JamSeshun.Services.Tuning;
 /// </summary>
 public readonly record struct StabilizedPitch(Note Note, float Frequency, float ErrorInCents, float Confidence)
 {
-    public bool HasPitch => Note.Name != null;
+    public bool HasPitch => this.Note.Name != null;
 }

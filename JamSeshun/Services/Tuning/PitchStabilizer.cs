@@ -55,81 +55,81 @@ public sealed class PitchStabilizer
         float avgLevel = windowFrames.Count > 0 ? windowFrames.Average(f => f.SignalLevel) : 0f;
         var pitched = windowFrames.Where(f => f.Fundamental.Name != null).ToList();
 
-        if (avgLevel >= minSignalLevel && pitched.Count > 0)
+        if (avgLevel >= this.minSignalLevel && pitched.Count > 0)
         {
             var group = pitched.GroupBy(f => f.Fundamental).OrderByDescending(g => g.Count()).First();
             float agreement = (float)group.Count() / pitched.Count;
 
-            if (agreement >= minAgreement)
+            if (agreement >= this.minAgreement)
             {
-                lowConfidenceStreak = 0;
-                UpdateLock(group.Key, group.Average(f => f.EstimatedFrequency));
+                this.lowConfidenceStreak = 0;
+                this.UpdateLock(group.Key, group.Average(f => f.EstimatedFrequency));
 
                 // Confidence saturates a little above the floor; scaled by agreement.
-                float levelConfidence = Math.Min(1f, avgLevel / (minSignalLevel * 4f));
+                float levelConfidence = Math.Min(1f, avgLevel / (this.minSignalLevel * 4f));
                 float confidence = levelConfidence * agreement;
-                return Current(confidence);
+                return this.Current(confidence);
             }
         }
 
         // Weak / unconfident window.
-        if (++lowConfidenceStreak >= releaseWindows)
+        if (++this.lowConfidenceStreak >= this.releaseWindows)
         {
-            hasLock = false;
-            pendingCount = 0;
+            this.hasLock = false;
+            this.pendingCount = 0;
             return default; // no pitch
         }
 
         // Hold the existing lock through brief dropouts (confidence reported as 0).
-        return hasLock ? Current(0f) : default;
+        return this.hasLock ? this.Current(0f) : default;
     }
 
     /// <summary>Resets all state. Call when (re)starting a tuning session.</summary>
     public void Reset()
     {
-        hasLock = false;
-        pendingCount = 0;
-        lowConfidenceStreak = 0;
-        smoothedFrequency = 0;
+        this.hasLock = false;
+        this.pendingCount = 0;
+        this.lowConfidenceStreak = 0;
+        this.smoothedFrequency = 0;
     }
 
     private void UpdateLock(Note detectedNote, float detectedFrequency)
     {
-        if (!hasLock)
+        if (!this.hasLock)
         {
-            hasLock = true;
-            lockedNote = detectedNote;
-            smoothedFrequency = detectedFrequency;
-            pendingNote = detectedNote;
-            pendingCount = 0;
+            this.hasLock = true;
+            this.lockedNote = detectedNote;
+            this.smoothedFrequency = detectedFrequency;
+            this.pendingNote = detectedNote;
+            this.pendingCount = 0;
         }
-        else if (detectedNote == lockedNote)
+        else if (detectedNote == this.lockedNote)
         {
-            smoothedFrequency += emaAlpha * (detectedFrequency - smoothedFrequency);
-            pendingCount = 0;
+            this.smoothedFrequency += this.emaAlpha * (detectedFrequency - this.smoothedFrequency);
+            this.pendingCount = 0;
         }
         else
         {
             // A different note — require it to persist before switching the lock.
-            if (detectedNote == pendingNote)
+            if (detectedNote == this.pendingNote)
             {
-                pendingCount++;
+                this.pendingCount++;
             }
             else
             {
-                pendingNote = detectedNote;
-                pendingCount = 1;
+                this.pendingNote = detectedNote;
+                this.pendingCount = 1;
             }
 
-            if (pendingCount >= switchConfirmations)
+            if (this.pendingCount >= this.switchConfirmations)
             {
-                lockedNote = detectedNote;
-                smoothedFrequency = detectedFrequency;
-                pendingCount = 0;
+                this.lockedNote = detectedNote;
+                this.smoothedFrequency = detectedFrequency;
+                this.pendingCount = 0;
             }
         }
     }
 
     private StabilizedPitch Current(float confidence) =>
-        new(lockedNote, smoothedFrequency, lockedNote.GetCentsError(smoothedFrequency), confidence);
+        new(this.lockedNote, this.smoothedFrequency, this.lockedNote.GetCentsError(this.smoothedFrequency), confidence);
 }

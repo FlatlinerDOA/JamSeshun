@@ -1,4 +1,8 @@
+using System.ComponentModel;
+using System.Reactive.Disposables;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using JamSeshun.Services;
@@ -9,39 +13,68 @@ namespace JamSeshun.Views;
 
 public partial class TabListView : UserControl
 {
+    private readonly CompositeDisposable disposables = new();
+    private IDisposable? vmSubscription;
+    private TabListViewModel? vm;
+
     public TabListView()
     {
-        InitializeComponent();
-        DataContextChanged += OnDataContextChanged;
-        NewTabButton.Click += OnNewTabClicked;
-        ImportButton.Click += OnImportClicked;
+        this.InitializeComponent();
     }
 
-    private TabListViewModel? _vm;
-
-    private void OnDataContextChanged(object? sender, EventArgs e)
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (_vm != null)
-        {
-            _vm.PropertyChanged -= OnVmPropertyChanged;
-        }
+        base.OnAttachedToVisualTree(e);
 
-        _vm = DataContext as TabListViewModel;
+        this.disposables.Add(
+            Observable.FromEventPattern<RoutedEventArgs>(
+                    h => this.NewTabButton.Click += h, h => this.NewTabButton.Click -= h)
+                .Subscribe(async void (_) => await this.OnNewTabClicked())
+        );
 
-        if (_vm != null)
-        {
-            _vm.PropertyChanged += OnVmPropertyChanged;
-        }
+        this.disposables.Add(
+            Observable.FromEventPattern<RoutedEventArgs>(
+                    h => this.ImportButton.Click += h, h => this.ImportButton.Click -= h)
+                .Subscribe(async void (_) => await this.OnImportClicked())
+        );
+
+        this.disposables.Add(
+            Observable.FromEventPattern(this, nameof(DataContextChanged))
+                .Subscribe(_ => this.OnDataContextUpdated())
+        );
+
+        this.OnDataContextUpdated();
     }
 
-    private async void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnDataContextUpdated()
     {
-        if (e.PropertyName != nameof(TabListViewModel.SelectedTabReference))
+        this.vmSubscription?.Dispose();
+        this.vm = this.DataContext as TabListViewModel;
+        if (this.vm == null)
         {
             return;
         }
 
-        var tabRef = _vm?.SelectedTabReference;
+        _ = this.vm.LoadAllAsync();
+
+        this.vmSubscription = Observable.FromEventPattern<PropertyChangedEventHandler, PropertyChangedEventArgs>(
+                h => this.vm.PropertyChanged += h,
+                h => this.vm.PropertyChanged -= h)
+            .Where(ep => ep.EventArgs.PropertyName == nameof(TabListViewModel.SelectedTabReference))
+            .Subscribe(async void (_) => await this.OnSelectedTabReferenceChanged());
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        this.vmSubscription?.Dispose();
+        this.vmSubscription = null;
+        this.disposables.Clear();
+    }
+
+    private async Task OnSelectedTabReferenceChanged()
+    {
+        var tabRef = this.vm?.SelectedTabReference;
         if (tabRef == null)
         {
             return;
@@ -61,12 +94,12 @@ public partial class TabListView : UserControl
 
         await navPage.PushAsync(contentPage);
 
-        if (_vm != null)
+        if (this.vm != null)
         {
-            _vm.SelectedTabReference = null;
+            this.vm.SelectedTabReference = null;
         }
 
-        var savedTab = _vm?.LoadTab(tabRef.Id);
+        var savedTab = this.vm?.LoadTab(tabRef.Id);
         if (savedTab != null)
         {
             vm.Id  = tabRef.Id;
@@ -74,7 +107,7 @@ public partial class TabListView : UserControl
         }
     }
 
-    private async void OnNewTabClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private async Task OnNewTabClicked()
     {
         var navPage = this.FindAncestorOfType<NavigationPage>();
         if (navPage == null)
@@ -96,9 +129,9 @@ public partial class TabListView : UserControl
         MimeTypes = ["text/plain"]
     };
 
-    private async void OnImportClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private async Task OnImportClicked()
     {
-        if (_vm == null)
+        if (this.vm == null)
         {
             return;
         }
@@ -121,7 +154,7 @@ public partial class TabListView : UserControl
             return;
         }
 
-        _vm.BeginImport(files.Count);
+        this.vm.BeginImport(files.Count);
         var saved = 0;
         try
         {
@@ -131,7 +164,7 @@ public partial class TabListView : UserControl
                 await using var stream = await file.OpenReadAsync();
                 using var reader = new StreamReader(stream);
                 content = await reader.ReadToEndAsync();
-                if (await _vm.ImportOneAsync(file.Name, content))
+                if (await this.vm.ImportOneAsync(file.Name, content))
                 {
                     saved++;
                 }
@@ -139,7 +172,7 @@ public partial class TabListView : UserControl
         }
         finally
         {
-            _vm.EndImport(saved);
+            this.vm.EndImport(saved);
         }
     }
 }

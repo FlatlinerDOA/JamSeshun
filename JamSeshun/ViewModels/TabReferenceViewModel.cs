@@ -6,9 +6,9 @@ public class TabReferenceViewModel : ViewModelBase
 
     public TabReferenceViewModel(Guid id, string artist, string song)
     {
-        Id = id;
-        Artist = artist;
-        Song = song;
+        this.Id = id;
+        this.Artist = artist;
+        this.Song = song;
     }
 
     public Guid Id { get; }

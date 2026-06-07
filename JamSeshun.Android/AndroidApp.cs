@@ -12,6 +12,7 @@ using Optris.Icons.Avalonia;
 using Optris.Icons.Avalonia.FontAwesome;
 using Services;
 using Services.Tuning;
+using Application = Avalonia.Application;
 
 [Application]
 public class AndroidApp : AvaloniaAndroidApplication<App>
@@ -30,7 +31,7 @@ public class AndroidApp : AvaloniaAndroidApplication<App>
             .WithInterFont()
             .AfterSetup(_ =>
             {
-                if (App.Current?.ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+                if (Application.Current?.ApplicationLifetime is ISingleViewApplicationLifetime singleView)
                 {
                     singleView.MainView = App.ServiceProvider.GetKeyedService<Control>("MainView");
                 }

@@ -13,7 +13,7 @@ public partial class TunerNeedle : Control
     private const double SweepDeg = 55.0;
 
     public static readonly StyledProperty<double> AngleProperty =
-        AvaloniaProperty.Register<TunerNeedle, double>(nameof(Angle));
+        AvaloniaProperty.Register<TunerNeedle, double>(nameof(TunerNeedle.Angle));
 
     static TunerNeedle()
     {
@@ -22,7 +22,7 @@ public partial class TunerNeedle : Control
 
     public TunerNeedle()
     {
-        Transitions = new Transitions
+        this.Transitions = new Transitions
         {
             new DoubleTransition
             {
@@ -35,14 +35,14 @@ public partial class TunerNeedle : Control
 
     public double Angle
     {
-        get => GetValue(AngleProperty);
-        set => SetValue(AngleProperty, value);
+        get => this.GetValue(AngleProperty);
+        set => this.SetValue(AngleProperty, value);
     }
 
     public override void Render(DrawingContext ctx)
     {
-        var w = Bounds.Width;
-        var h = Bounds.Height;
+        var w = this.Bounds.Width;
+        var h = this.Bounds.Height;
         if (w <= 0 || h <= 0)
         {
             return;
@@ -79,7 +79,7 @@ public partial class TunerNeedle : Control
         }
 
         // ── Needle ────────────────────────────────────────────
-        var clampedAngle = Math.Max(-SweepDeg, Math.Min(SweepDeg, Angle));
+        var clampedAngle = Math.Max(-SweepDeg, Math.Min(SweepDeg, this.Angle));
         var needleRad = DegToRad(clampedAngle);
         var pivot = new Point(cx, cy);
         var tip = PolarPoint(cx, cy, r * 0.82, needleRad);

@@ -30,8 +30,7 @@ internal class SoundFlowTuningService : ITuningService
         this.engine = new MiniAudioEngine();
     }
 
-    public IObservable<IReadOnlyList<AudioCaptureDevice>> GetAudioCaptureDevices() => Observable.Return<IReadOnlyList<AudioCaptureDevice>>(
-        engine.CaptureDevices.Select(d => new AudioCaptureDevice((int)d.Id, d.Name, d.IsDefault))
+    public IObservable<IReadOnlyList<AudioCaptureDevice>> GetAudioCaptureDevices() => Observable.Return<IReadOnlyList<AudioCaptureDevice>>(this.engine.CaptureDevices.Select(d => new AudioCaptureDevice((int)d.Id, d.Name, d.IsDefault))
             .ToList());
 
     public IObservable<DetectedPitch> StartDetectingPitch(AudioCaptureDevice device)
@@ -50,8 +49,8 @@ internal class SoundFlowTuningService : ITuningService
                 };
 
                 var pitchDetector = new AutoCorrelationPitchDetector(format.SampleRate);
-                var deviceInfo = engine.CaptureDevices.FirstOrDefault(d => (int)d.Id == deviceId);
-                var captureDevice = engine.InitializeCaptureDevice(deviceInfo, format);
+                var deviceInfo = this.engine.CaptureDevices.FirstOrDefault(d => (int)d.Id == deviceId);
+                var captureDevice = this.engine.InitializeCaptureDevice(deviceInfo, format);
 
                 var buffer = new BipBuffer<float>(pitchDetector.SampleBufferSize * 4);
                 void OnBufferReady(Span<float> samples, Capability capability)

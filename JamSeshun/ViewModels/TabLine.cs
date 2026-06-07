@@ -11,7 +11,7 @@ public record TabLine(TabLineKind Kind, string Text)
     private static readonly IBrush SectionBrush = new SolidColorBrush(Color.Parse("#f1f5f9"));
     private static readonly IBrush LyricBrush   = new SolidColorBrush(Color.Parse("#d1d5db"));
 
-    public IBrush ForegroundBrush => Kind switch
+    public IBrush ForegroundBrush => this.Kind switch
     {
         TabLineKind.Chord     => ChordBrush,
         TabLineKind.TabString => TabBrush,
@@ -19,6 +19,6 @@ public record TabLine(TabLineKind Kind, string Text)
         _                     => LyricBrush,
     };
 
-    public FontWeight FontWeight => Kind == TabLineKind.Section ? FontWeight.SemiBold : FontWeight.Normal;
-    public double MinHeight => Kind == TabLineKind.Blank ? 10 : 0;
+    public FontWeight FontWeight => this.Kind == TabLineKind.Section ? FontWeight.SemiBold : FontWeight.Normal;
+    public double MinHeight => this.Kind == TabLineKind.Blank ? 10 : 0;
 }

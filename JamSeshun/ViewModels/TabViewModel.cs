@@ -6,76 +6,76 @@ namespace JamSeshun.ViewModels;
 
 public class TabViewModel : ViewModelBase
 {
-    private readonly TabLibraryService? _library;
+    private readonly TabLibraryService? library;
 
     public TabViewModel() { }
 
     public TabViewModel(SavedTab tab)
     {
-        _tab = tab;
+        this.tab = tab;
     }
 
     public TabViewModel(TabLibraryService? library)
     {
-        _library = library;
+        this.library = library;
     }
 
     public Guid? Id { get; set; }
 
-    private SavedTab? _tab;
+    private SavedTab? tab;
     public SavedTab? Tab
     {
-        get => _tab;
+        get => this.tab;
         set
         {
-            if (_tab == value)
+            if (this.tab == value)
             {
                 return;
             }
-            _tab = value;
-            OnPropertyChanged(nameof(Tab));
-            OnPropertyChanged(nameof(Artist));
-            OnPropertyChanged(nameof(Song));
-            OnPropertyChanged(nameof(TuningDisplay));
-            OnPropertyChanged(nameof(HasTuning));
-            OnPropertyChanged(nameof(HasParsableTuning));
-            OnPropertyChanged(nameof(HasTuningDisplayOnly));
-            OnPropertyChanged(nameof(Chords));
-            OnPropertyChanged(nameof(HasChords));
-            OnPropertyChanged(nameof(Lines));
+            this.tab = value;
+            this.OnPropertyChanged(nameof(TabViewModel.Tab));
+            this.OnPropertyChanged(nameof(TabViewModel.Artist));
+            this.OnPropertyChanged(nameof(TabViewModel.Song));
+            this.OnPropertyChanged(nameof(TabViewModel.TuningDisplay));
+            this.OnPropertyChanged(nameof(TabViewModel.HasTuning));
+            this.OnPropertyChanged(nameof(TabViewModel.HasParsableTuning));
+            this.OnPropertyChanged(nameof(TabViewModel.HasTuningDisplayOnly));
+            this.OnPropertyChanged(nameof(TabViewModel.Chords));
+            this.OnPropertyChanged(nameof(TabViewModel.HasChords));
+            this.OnPropertyChanged(nameof(TabViewModel.Lines));
         }
     }
 
-    public string Artist => _tab?.Artist ?? string.Empty;
-    public string Song   => _tab?.Song   ?? string.Empty;
+    public string Artist => this.tab?.Artist ?? string.Empty;
+    public string Song   => this.tab?.Song   ?? string.Empty;
 
     public string TuningDisplay
     {
         get
         {
-            if (_tab == null)
+            if (this.tab == null)
             {
                 return string.Empty;
             }
             var parts = new List<string>(2);
-            if (!string.IsNullOrEmpty(_tab.Tuning))
+            if (!string.IsNullOrEmpty(this.tab.Tuning))
             {
-                parts.Add(_tab.Tuning);
+                parts.Add(this.tab.Tuning);
             }
-            if (_tab.Capo > 0)
+            if (this.tab.Capo > 0)
             {
-                parts.Add($"Capo {_tab.Capo}");
+                parts.Add($"Capo {this.tab.Capo}");
             }
             return string.Join("  ·  ", parts);
         }
     }
 
-    public bool HasTuning => !string.IsNullOrEmpty(TuningDisplay);
-    public bool HasParsableTuning => GuitarTuning.TryParse(_tab?.Tuning) != null;
-    public bool HasTuningDisplayOnly => HasTuning && !HasParsableTuning;
-    public IReadOnlyList<Chord> Chords => ParseChords(_tab?.Content);
-    public bool HasChords => Chords.Count > 0;
-    public IReadOnlyList<TabLine> Lines => ParseLines(_tab?.Content);
+    public bool HasTuning => !string.IsNullOrEmpty(this.TuningDisplay);
+    public bool HasParsableTuning => GuitarTuning.TryParse(this.tab?.Tuning) != null;
+    public bool HasTuningDisplayOnly => this.HasTuning && !this.HasParsableTuning;
+    public IReadOnlyList<Chord> Chords => ParseChords(this.tab?.Content);
+    public bool HasChords => this.Chords.Count > 0;
+    public IReadOnlyList<TabLine> Lines => ParseLines(this.tab?.Content);
 
     // ── Chord name regex (used for both chord-line detection and inline scanning) ──
 
@@ -366,14 +366,14 @@ public class TabViewModel : ViewModelBase
 
     public void ReloadTab()
     {
-        if (Id == null || _library == null)
+        if (this.Id == null || this.library == null)
         {
             return;
         }
-        var savedTab = _library.Get(Id.Value);
+        var savedTab = this.library.Get(this.Id.Value);
         if (savedTab != null)
         {
-            Tab = savedTab;
+            this.Tab = savedTab;
         }
     }
 }

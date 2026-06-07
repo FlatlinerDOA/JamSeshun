@@ -5,8 +5,8 @@ namespace JamSeshun.ViewModels;
 
 public class TabEditorViewModel : ViewModelBase
 {
-    private readonly TabLibraryService? _library;
-    private Guid? _editingId;
+    private readonly TabLibraryService? library;
+    private Guid? editingId;
     private string artist = string.Empty;
     private string song = string.Empty;
     private string content = string.Empty;
@@ -16,69 +16,81 @@ public class TabEditorViewModel : ViewModelBase
 
     public TabEditorViewModel()
     {
-        SaveCommand         = new RelayCommand(Save, CanSave);
-        DeleteCommand       = new RelayCommand(() => IsConfirmingDelete = true, () => _editingId.HasValue);
-        ConfirmDeleteCommand = new RelayCommand(Delete);
-        CancelDeleteCommand  = new RelayCommand(() => IsConfirmingDelete = false);
-        ClearCommand        = new RelayCommand(Clear);
-        IncrementCapoCommand = new RelayCommand(() => { if (capo < 12)
+        this.SaveCommand         = new RelayCommand(this.Save, this.CanSave);
+        this.DeleteCommand       = new RelayCommand(() => this.IsConfirmingDelete = true, () => this.editingId.HasValue);
+        this.ConfirmDeleteCommand = new RelayCommand(this.Delete);
+        this.CancelDeleteCommand  = new RelayCommand(() => this.IsConfirmingDelete = false);
+        this.ClearCommand        = new RelayCommand(this.Clear);
+        this.IncrementCapoCommand = new RelayCommand(() => { if (this.capo < 12)
             {
-                Capo = capo + 1;
+                this.Capo = this.capo + 1;
             }
         });
-        DecrementCapoCommand = new RelayCommand(() => { if (capo > 0)
+        this.DecrementCapoCommand = new RelayCommand(() => { if (this.capo > 0)
             {
-                Capo = capo - 1;
+                this.Capo = this.capo - 1;
             }
         });
     }
 
     public TabEditorViewModel(TabLibraryService library) : this()
     {
-        _library = library;
+        this.library = library;
     }
 
-    public string Title => _editingId.HasValue ? "Edit Tab" : "New Tab";
+    public string Title => this.editingId.HasValue ? "Edit Tab" : "New Tab";
 
     public string Artist
     {
-        get => artist;
-        set { SetProperty(ref artist, value); SaveCommand.NotifyCanExecuteChanged(); SavedMessage = string.Empty; }
+        get => this.artist;
+        set {
+            this.SetProperty(ref this.artist, value);
+            this.SaveCommand.NotifyCanExecuteChanged();
+            this.SavedMessage = string.Empty; }
     }
 
     public string Song
     {
-        get => song;
-        set { SetProperty(ref song, value); SaveCommand.NotifyCanExecuteChanged(); SavedMessage = string.Empty; }
+        get => this.song;
+        set {
+            this.SetProperty(ref this.song, value);
+            this.SaveCommand.NotifyCanExecuteChanged();
+            this.SavedMessage = string.Empty; }
     }
 
     public string Content
     {
-        get => content;
-        set { SetProperty(ref content, value); SavedMessage = string.Empty; }
+        get => this.content;
+        set {
+            this.SetProperty(ref this.content, value);
+            this.SavedMessage = string.Empty; }
     }
 
     public string Tuning
     {
-        get => tuning;
-        set => SetProperty(ref tuning, value);
+        get => this.tuning;
+        set => this.SetProperty(ref this.tuning, value);
     }
 
     public int Capo
     {
-        get => capo;
-        set { SetProperty(ref capo, value); OnPropertyChanged(nameof(CapoLabel)); }
+        get => this.capo;
+        set {
+            this.SetProperty(ref this.capo, value);
+            this.OnPropertyChanged(nameof(TabEditorViewModel.CapoLabel)); }
     }
 
-    public string CapoLabel => capo > 0 ? $"Capo {capo}" : "Capo";
+    public string CapoLabel => this.capo > 0 ? $"Capo {this.capo}" : "Capo";
 
     public string SavedMessage
     {
-        get => savedMessage;
-        private set { SetProperty(ref savedMessage, value); OnPropertyChanged(nameof(HasSavedMessage)); }
+        get => this.savedMessage;
+        private set {
+            this.SetProperty(ref this.savedMessage, value);
+            this.OnPropertyChanged(nameof(TabEditorViewModel.HasSavedMessage)); }
     }
 
-    public bool HasSavedMessage => !string.IsNullOrEmpty(savedMessage);
+    public bool HasSavedMessage => !string.IsNullOrEmpty(this.savedMessage);
 
     public event Action? Saved;
     public event Action? Deleted;
@@ -86,8 +98,8 @@ public class TabEditorViewModel : ViewModelBase
     private bool isConfirmingDelete;
     public bool IsConfirmingDelete
     {
-        get => isConfirmingDelete;
-        private set => SetProperty(ref isConfirmingDelete, value);
+        get => this.isConfirmingDelete;
+        private set => this.SetProperty(ref this.isConfirmingDelete, value);
     }
 
     public RelayCommand SaveCommand { get; }
@@ -98,60 +110,60 @@ public class TabEditorViewModel : ViewModelBase
     public RelayCommand IncrementCapoCommand { get; }
     public RelayCommand DecrementCapoCommand { get; }
 
-    public bool CanDelete => _editingId.HasValue;
+    public bool CanDelete => this.editingId.HasValue;
 
     public void LoadForEdit(Guid id, SavedTab tab)
     {
-        _editingId = id;
-        Artist = tab.Artist;
-        Song = tab.Song;
-        Content = tab.Content;
-        Tuning = tab.Tuning;
-        Capo = tab.Capo;
-        SavedMessage = string.Empty;
-        OnPropertyChanged(nameof(Title));
-        OnPropertyChanged(nameof(CanDelete));
-        DeleteCommand.NotifyCanExecuteChanged();
+        this.editingId = id;
+        this.Artist = tab.Artist;
+        this.Song = tab.Song;
+        this.Content = tab.Content;
+        this.Tuning = tab.Tuning;
+        this.Capo = tab.Capo;
+        this.SavedMessage = string.Empty;
+        this.OnPropertyChanged(nameof(TabEditorViewModel.Title));
+        this.OnPropertyChanged(nameof(TabEditorViewModel.CanDelete));
+        this.DeleteCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanSave() =>
-        !string.IsNullOrWhiteSpace(artist) && !string.IsNullOrWhiteSpace(song);
+        !string.IsNullOrWhiteSpace(this.artist) && !string.IsNullOrWhiteSpace(this.song);
 
     private void Delete()
     {
-        if (_library == null || _editingId == null)
+        if (this.library == null || this.editingId == null)
         {
             return;
         }
-        IsConfirmingDelete = false;
-        _library.Delete(_editingId.Value);
+        this.IsConfirmingDelete = false;
+        this.library.Delete(this.editingId.Value);
         Deleted?.Invoke();
     }
 
     private void Save()
     {
-        if (_library == null)
+        if (this.library == null)
         {
             return;
         }
-        var tab = new SavedTab(artist.Trim(), song.Trim(), content, tuning.Trim(), capo, DateTimeOffset.Now);
-        _editingId ??= Guid.NewGuid();
-        _library.Save(_editingId.Value, $"{tab.Artist} - {tab.Song}", tab);
-        SavedMessage = "Saved!";
+        var tab = new SavedTab(this.artist.Trim(), this.song.Trim(), this.content, this.tuning.Trim(), this.capo, DateTimeOffset.Now);
+        this.editingId ??= Guid.NewGuid();
+        this.library.Save(this.editingId.Value, $"{tab.Artist} - {tab.Song}", tab);
+        this.SavedMessage = "Saved!";
         Saved?.Invoke();
     }
 
     private void Clear()
     {
-        Artist = string.Empty;
-        Song = string.Empty;
-        Content = string.Empty;
-        Tuning = string.Empty;
-        Capo = 0;
-        SavedMessage = string.Empty;
-        _editingId = null;
-        OnPropertyChanged(nameof(Title));
-        OnPropertyChanged(nameof(CanDelete));
-        DeleteCommand.NotifyCanExecuteChanged();
+        this.Artist = string.Empty;
+        this.Song = string.Empty;
+        this.Content = string.Empty;
+        this.Tuning = string.Empty;
+        this.Capo = 0;
+        this.SavedMessage = string.Empty;
+        this.editingId = null;
+        this.OnPropertyChanged(nameof(TabEditorViewModel.Title));
+        this.OnPropertyChanged(nameof(TabEditorViewModel.CanDelete));
+        this.DeleteCommand.NotifyCanExecuteChanged();
     }
 }

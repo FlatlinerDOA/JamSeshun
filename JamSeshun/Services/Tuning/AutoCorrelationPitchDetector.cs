@@ -43,7 +43,7 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
     public DetectedPitch DetectPitch(ReadOnlySpan<float> signal)
     {
         float level = ComputeRms(signal);
-        var frequency = (float)FindFundamentalFrequency(signal);
+        var frequency = (float)this.FindFundamentalFrequency(signal);
         var note = Note.GetClosestNote(frequency, MinimumFrequency, MaximumFrequency);
 
         // Always report the signal level (even when no pitch is found) so callers
@@ -75,8 +75,8 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
 
     private double FindFundamentalFrequency(ReadOnlySpan<float> signal)
     {
-        int hiLag = Math.Min(maxLag, signal.Length / 2);
-        if (hiLag <= minLag)
+        int hiLag = Math.Min(this.maxLag, signal.Length / 2);
+        if (hiLag <= this.minLag)
         {
             return 0d;
         }
@@ -108,7 +108,7 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
         // Autocorrelation across the candidate lag range.
         var corr = new double[hiLag + 2];
         double maxPeak = 0;
-        for (int lag = minLag; lag <= hiLag; lag++)
+        for (int lag = this.minLag; lag <= hiLag; lag++)
         {
             double sum = 0;
             int n = signal.Length - lag;
@@ -135,7 +135,7 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
         // (true fundamental) over its sub-octaves.
         double threshold = maxPeak * PeakRatio;
         int bestLag = 0;
-        for (int lag = minLag + 1; lag < hiLag; lag++)
+        for (int lag = this.minLag + 1; lag < hiLag; lag++)
         {
             if (corr[lag] >= threshold &&
                 corr[lag] > corr[lag - 1] &&
@@ -157,6 +157,6 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
         double shift = denom != 0 ? 0.5 * (y0 - y2) / denom : 0;
         double refinedLag = bestLag + shift;
 
-        return refinedLag > 0 ? sampleRate / refinedLag : 0d;
+        return refinedLag > 0 ? this.sampleRate / refinedLag : 0d;
     }
 }

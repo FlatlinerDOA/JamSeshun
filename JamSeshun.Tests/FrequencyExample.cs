@@ -19,15 +19,15 @@ public record FrequencyExample(double Fundamental, int HarmonicCount, double Noi
     {
         get
         {
-            int numSamples = (int)(DurationInSeconds * SampleRate);
+            int numSamples = (int)(this.DurationInSeconds * this.SampleRate);
             double[] wave = new double[numSamples];
-            double dt = 1.0 / SampleRate;
+            double dt = 1.0 / this.SampleRate;
 
-            if (HarmonicAmplitudes is { } amps)
+            if (this.HarmonicAmplitudes is { } amps)
             {
                 for (int h = 0; h < amps.Length; h++)
                 {
-                    double freq = Fundamental * (h + 1);
+                    double freq = this.Fundamental * (h + 1);
                     double amp = amps[h];
                     for (int i = 0; i < numSamples; i++)
                         wave[i] += amp * Math.Sin(2 * Math.PI * freq * i * dt);
@@ -37,20 +37,20 @@ public record FrequencyExample(double Fundamental, int HarmonicCount, double Noi
             {
                 // Default: fundamental + harmonics at amplitude 1/n
                 for (int i = 0; i < numSamples; i++)
-                    wave[i] = Amplitude * Math.Sin(2 * Math.PI * Fundamental * i * dt);
+                    wave[i] = this.Amplitude * Math.Sin(2 * Math.PI * this.Fundamental * i * dt);
 
-                for (int n = 2; n <= HarmonicCount + 1; n++)
+                for (int n = 2; n <= this.HarmonicCount + 1; n++)
                 {
-                    double harmonicAmplitude = Amplitude / n;
+                    double harmonicAmplitude = this.Amplitude / n;
                     for (int i = 0; i < numSamples; i++)
-                        wave[i] += harmonicAmplitude * Math.Sin(2 * Math.PI * n * Fundamental * i * dt);
+                        wave[i] += harmonicAmplitude * Math.Sin(2 * Math.PI * n * this.Fundamental * i * dt);
                 }
             }
 
-            if (Noise > 0)
+            if (this.Noise > 0)
             {
                 for (int i = 0; i < numSamples; i++)
-                    wave[i] += Noise * (random.NextDouble() * 2 - 1);
+                    wave[i] += this.Noise * (this.random.NextDouble() * 2 - 1);
             }
 
             return wave.Select(d => (float)d).ToArray();

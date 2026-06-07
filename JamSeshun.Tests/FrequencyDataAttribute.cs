@@ -20,7 +20,7 @@ namespace JamSeshun.Tests
         {
             IReadOnlyCollection<ITheoryDataRow?> rows =
             [
-                new TheoryDataRow(new FrequencyExample(Fundamental, HarmonicCount, Noise, DurationInSeconds, SampleRate, Amplitude))
+                new TheoryDataRow(new FrequencyExample(this.Fundamental, this.HarmonicCount, this.Noise, this.DurationInSeconds, this.SampleRate, this.Amplitude))
             ];
             return new ValueTask<IReadOnlyCollection<ITheoryDataRow?>>(rows);
         }

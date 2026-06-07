@@ -6,7 +6,7 @@ namespace JamSeshun.Views
     {
         public PerformanceView()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
     }
 }

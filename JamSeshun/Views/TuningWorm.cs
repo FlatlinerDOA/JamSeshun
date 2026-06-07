@@ -22,13 +22,13 @@ public sealed class TuningWorm : Control
     private const int TickMs = 33;          // ~30 fps
 
     public static readonly StyledProperty<double> CentsProperty =
-        AvaloniaProperty.Register<TuningWorm, double>(nameof(Cents));
+        AvaloniaProperty.Register<TuningWorm, double>(nameof(TuningWorm.Cents));
 
     public static readonly StyledProperty<bool> IsActiveProperty =
-        AvaloniaProperty.Register<TuningWorm, bool>(nameof(IsActive));
+        AvaloniaProperty.Register<TuningWorm, bool>(nameof(TuningWorm.IsActive));
 
     public static readonly StyledProperty<bool> HasReadingProperty =
-        AvaloniaProperty.Register<TuningWorm, bool>(nameof(HasReading));
+        AvaloniaProperty.Register<TuningWorm, bool>(nameof(TuningWorm.HasReading));
 
     // NaN marks a gap (no confident reading) so silence scrolls as blank space.
     private readonly List<float> samples = new();
@@ -41,24 +41,24 @@ public sealed class TuningWorm : Control
 
     public TuningWorm()
     {
-        timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(TickMs) };
-        timer.Tick += OnTick;
+        this.timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(TickMs) };
+        this.timer.Tick += this.OnTick;
     }
 
-    public double Cents { get => GetValue(CentsProperty); set => SetValue(CentsProperty, value); }
-    public bool IsActive { get => GetValue(IsActiveProperty); set => SetValue(IsActiveProperty, value); }
-    public bool HasReading { get => GetValue(HasReadingProperty); set => SetValue(HasReadingProperty, value); }
+    public double Cents { get => this.GetValue(CentsProperty); set => this.SetValue(CentsProperty, value); }
+    public bool IsActive { get => this.GetValue(IsActiveProperty); set => this.SetValue(IsActiveProperty, value); }
+    public bool HasReading { get => this.GetValue(HasReadingProperty); set => this.SetValue(HasReadingProperty, value); }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        timer.Start();
+        this.timer.Start();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        timer.Stop();
+        this.timer.Stop();
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -67,31 +67,31 @@ public sealed class TuningWorm : Control
         // Clear history when a fresh tuning session starts.
         if (change.Property == IsActiveProperty && change.GetNewValue<bool>())
         {
-            samples.Clear();
+            this.samples.Clear();
         }
     }
 
     private void OnTick(object? sender, EventArgs e)
     {
-        if (!IsActive)
+        if (!this.IsActive)
         {
             return;
         }
 
-        samples.Add(IsActive && HasReading ? (float)Cents : float.NaN);
+        this.samples.Add(this.IsActive && this.HasReading ? (float)this.Cents : float.NaN);
 
-        int capacity = Math.Max(1, (int)(Bounds.Height / RowStep) + 1);
-        if (samples.Count > capacity)
+        int capacity = Math.Max(1, (int)(this.Bounds.Height / RowStep) + 1);
+        if (this.samples.Count > capacity)
         {
-            samples.RemoveRange(0, samples.Count - capacity);
+            this.samples.RemoveRange(0, this.samples.Count - capacity);
         }
 
-        InvalidateVisual();
+        this.InvalidateVisual();
     }
 
     public override void Render(DrawingContext ctx)
     {
-        double w = Bounds.Width, h = Bounds.Height;
+        double w = this.Bounds.Width, h = this.Bounds.Height;
         if (w <= 0 || h <= 0)
         {
             return;
@@ -110,9 +110,9 @@ public sealed class TuningWorm : Control
         ctx.DrawLine(centreLinePen, new Point(cx, 0), new Point(cx, h));
 
         // Newest sample sits at the bottom; older ones scroll up.
-        for (int i = 0; i < samples.Count; i++)
+        for (int i = 0; i < this.samples.Count; i++)
         {
-            float cents = samples[samples.Count - 1 - i];
+            float cents = this.samples[this.samples.Count - 1 - i];
             if (float.IsNaN(cents))
             {
                 continue;

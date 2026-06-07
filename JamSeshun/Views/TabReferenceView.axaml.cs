@@ -7,12 +7,12 @@ namespace JamSeshun.Views
     {
         public TabReferenceView()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
 
         public TabReferenceView(TabReferenceViewModel viewModel)
         {
-            InitializeComponent();
+            this.InitializeComponent();
             this.DataContext = viewModel;
         }
     }

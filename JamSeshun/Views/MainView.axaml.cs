@@ -7,12 +7,12 @@ public partial class MainView : UserControl
 {
     public MainView()
     {
-        InitializeComponent();
+        this.InitializeComponent();
     }
 
     public MainView(MainViewModel viewModel)
     {
-        InitializeComponent();
-        DataContext = viewModel;
+        this.InitializeComponent();
+        this.DataContext = viewModel;
     }
 }

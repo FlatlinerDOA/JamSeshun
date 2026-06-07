@@ -17,7 +17,7 @@ public class AvaloniaScheduler : LocalScheduler
     /// </summary>
     private const int MaxReentrantSchedules = 32;
 
-    private int _reentrancyGuard;
+    private int reentrancyGuard;
 
     /// <summary>
     /// The instance of the <see cref="AvaloniaScheduler"/>.
@@ -61,20 +61,20 @@ public class AvaloniaScheduler : LocalScheduler
             }
             else
             {
-                if (_reentrancyGuard >= MaxReentrantSchedules)
+                if (this.reentrancyGuard >= MaxReentrantSchedules)
                 {
                     return PostOnDispatcher();
                 }
 
                 try
                 {
-                    _reentrancyGuard++;
+                    this.reentrancyGuard++;
 
                     return action(this, state);
                 }
                 finally
                 {
-                    _reentrancyGuard--;
+                    this.reentrancyGuard--;
                 }
             }
         }

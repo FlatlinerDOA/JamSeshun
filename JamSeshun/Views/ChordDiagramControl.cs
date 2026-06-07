@@ -11,12 +11,12 @@ namespace JamSeshun.Views;
 public class ChordDiagramControl : Control
 {
     public static readonly StyledProperty<int[]?> FretsProperty =
-        AvaloniaProperty.Register<ChordDiagramControl, int[]?>(nameof(Frets));
+        AvaloniaProperty.Register<ChordDiagramControl, int[]?>(nameof(ChordDiagramControl.Frets));
 
     public int[]? Frets
     {
-        get => GetValue(FretsProperty);
-        set => SetValue(FretsProperty, value);
+        get => this.GetValue(FretsProperty);
+        set => this.SetValue(FretsProperty, value);
     }
 
     static ChordDiagramControl()
@@ -44,7 +44,7 @@ public class ChordDiagramControl : Control
 
     public override void Render(DrawingContext ctx)
     {
-        var frets = Frets;
+        var frets = this.Frets;
         if (frets == null || frets.Length != StringCount)
         {
             return;

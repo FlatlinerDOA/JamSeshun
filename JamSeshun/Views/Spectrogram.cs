@@ -17,7 +17,7 @@ using System.Numerics;
 public class Spectrogram : Canvas
 {
     public static readonly StyledProperty<double[]> LatestPcmSampleProperty =
-    AvaloniaProperty.Register<Spectrogram, double[]>(nameof(LatestPcmSample));
+    AvaloniaProperty.Register<Spectrogram, double[]>(nameof(Spectrogram.LatestPcmSample));
 
     private ReadOnlyMemory<double> pcmData = new double[2048]; // Your PCM data
 

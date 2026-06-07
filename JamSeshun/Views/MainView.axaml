@@ -13,11 +13,11 @@
 
   <TabbedPage>
     <ContentPage Header="Tuner">
-      <views:TunerView DataContext="{Binding TunerVM}" />
+      <views:TunerView DataContext="{Binding TunerVm}" />
     </ContentPage>
     <NavigationPage Header="Songs">
       <ContentPage NavigationPage.HasNavigationBar="False">
-        <views:TabListView DataContext="{Binding TabListVM}" />
+        <views:TabListView DataContext="{Binding TabListVm}" />
       </ContentPage>
     </NavigationPage>
     <!-- <ContentPage Header="Performance"> -->

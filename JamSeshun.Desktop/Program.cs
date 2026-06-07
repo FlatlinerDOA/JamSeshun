@@ -40,11 +40,11 @@ class Program
             .LogToTrace()
             .AfterSetup(a =>
             {
-                if (App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                if (Application.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
                     desktop.MainWindow = App.ServiceProvider.GetKeyedService<Window>("MainWindow");
                 }
-                else if (App.Current.ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
+                else if (Application.Current.ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
                 {
                     singleViewPlatform.MainView = App.ServiceProvider.GetKeyedService<Control>("MainView");
                 }

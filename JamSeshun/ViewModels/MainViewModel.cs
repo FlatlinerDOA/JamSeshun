@@ -4,9 +4,9 @@ public partial class MainViewModel : ViewModelBase
 {
     public MainViewModel()
     {
-        TunerVM = new TunerViewModel();
-        TabListVM = new TabListViewModel();
-        PerformanceVM = new PerformanceViewModel();
+        this.TunerVm = new TunerViewModel();
+        this.TabListVm = new TabListViewModel();
+        this.PerformanceVm = new PerformanceViewModel();
     }
 
     public MainViewModel(
@@ -14,12 +14,12 @@ public partial class MainViewModel : ViewModelBase
         TabListViewModel tabListVm,
         PerformanceViewModel performanceVm)
     {
-        TunerVM = tunerVm;
-        TabListVM = tabListVm;
-        PerformanceVM = performanceVm;
+        this.TunerVm = tunerVm;
+        this.TabListVm = tabListVm;
+        this.PerformanceVm = performanceVm;
     }
 
-    public TunerViewModel TunerVM { get; }
-    public TabListViewModel TabListVM { get; }
-    public PerformanceViewModel PerformanceVM { get; }
+    public TunerViewModel TunerVm { get; }
+    public TabListViewModel TabListVm { get; }
+    public PerformanceViewModel PerformanceVm { get; }
 }

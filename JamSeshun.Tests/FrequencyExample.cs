@@ -30,27 +30,35 @@ public record FrequencyExample(double Fundamental, int HarmonicCount, double Noi
                     double freq = this.Fundamental * (h + 1);
                     double amp = amps[h];
                     for (int i = 0; i < numSamples; i++)
+                    {
                         wave[i] += amp * Math.Sin(2 * Math.PI * freq * i * dt);
+                    }
                 }
             }
             else
             {
                 // Default: fundamental + harmonics at amplitude 1/n
                 for (int i = 0; i < numSamples; i++)
+                {
                     wave[i] = this.Amplitude * Math.Sin(2 * Math.PI * this.Fundamental * i * dt);
+                }
 
                 for (int n = 2; n <= this.HarmonicCount + 1; n++)
                 {
                     double harmonicAmplitude = this.Amplitude / n;
                     for (int i = 0; i < numSamples; i++)
+                    {
                         wave[i] += harmonicAmplitude * Math.Sin(2 * Math.PI * n * this.Fundamental * i * dt);
+                    }
                 }
             }
 
             if (this.Noise > 0)
             {
                 for (int i = 0; i < numSamples; i++)
+                {
                     wave[i] += this.Noise * (this.random.NextDouble() * 2 - 1);
+                }
             }
 
             return wave.Select(d => (float)d).ToArray();

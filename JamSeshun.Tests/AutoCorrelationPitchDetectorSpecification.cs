@@ -140,7 +140,9 @@ public class AutoCorrelationPitchDetectorSpecification
         var f = FrequencyExample.GuitarString(A);
         var samples = f.Samples;
         for (int i = 0; i < samples.Length; i++)
+        {
             samples[i] += 0.4f; // constant DC offset
+        }
 
         var actual = Detector(f.SampleRate).DetectPitch(samples.AsSpan());
         Assert.InRange(actual.EstimatedFrequency, A - Tolerance, A + Tolerance);

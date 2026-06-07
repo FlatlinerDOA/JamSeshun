@@ -2,8 +2,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using System.Reactive.Disposables;
 using Avalonia.VisualTree;
+using System.Reactive.Disposables;
+using JamSeshun.Services;
 using JamSeshun.ViewModels;
 
 namespace JamSeshun.Views;
@@ -25,8 +26,11 @@ public partial class TunerView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        this.StringGuide.AddHandler(PointerPressedEvent, this.OnStringGuideTapped, RoutingStrategies.Bubble);
-        this.disposables.Add(Disposable.Create(() => this.StringGuide.RemoveHandler(PointerPressedEvent, this.OnStringGuideTapped)));
+
+        this.disposables.Add(
+            this.StringGuide.AsObservable(PointerPressedEvent, RoutingStrategies.Bubble)
+                .Subscribe(this.OnStringGuideTapped)
+        );
 
         if (this.DataContext is TunerViewModel vm)
         {
@@ -40,7 +44,7 @@ public partial class TunerView : UserControl
         this.disposables.Clear();
     }
 
-    private void OnStringGuideTapped(object? sender, PointerPressedEventArgs e)
+    private void OnStringGuideTapped(PointerPressedEventArgs e)
     {
         if (this.DataContext is not TunerViewModel vm)
         {

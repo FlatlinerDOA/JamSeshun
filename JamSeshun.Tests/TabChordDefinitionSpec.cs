@@ -100,7 +100,9 @@ public class TabChordDefinitionSpec
         Assert.Contains("D", names);
         // Diagram string rows must not leak in as chords.
         foreach (var row in new[] { "e", "b", "g", "d", "a" })
+        {
             Assert.DoesNotContain(row, names);
+        }
     }
 
     // ── Colon + bracket with no separating space (David Bowie - Space Oddity) ─

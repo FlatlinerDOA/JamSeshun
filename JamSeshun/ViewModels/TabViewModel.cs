@@ -75,6 +75,7 @@ public class TabViewModel : ViewModelBase
     public bool HasTuningDisplayOnly => this.HasTuning && !this.HasParsableTuning;
     public IReadOnlyList<Chord> Chords => ParseChords(this.tab?.Content);
     public bool HasChords => this.Chords.Count > 0;
+
     public IReadOnlyList<TabLine> Lines => ParseLines(this.tab?.Content);
 
     // ── Chord name regex (used for both chord-line detection and inline scanning) ──
@@ -113,7 +114,7 @@ public class TabViewModel : ViewModelBase
 
     // ── Chord parsing ────────────────────────────────────────────────────────────
 
-    private static IReadOnlyList<Chord> ParseChords(string? text)
+    public static IReadOnlyList<Chord> ParseChords(string? text)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -128,10 +129,12 @@ public class TabViewModel : ViewModelBase
 
         // Emit defined chords first (content defs beat the library).
         foreach (var (name, frets) in defs)
+        {
             if (seen.Add(name))
             {
                 chords.Add(new Chord(name, frets));
             }
+        }
 
         // Scan body lines for any chord names not already emitted.
         bool inChordSection = false;
@@ -167,17 +170,19 @@ public class TabViewModel : ViewModelBase
                 (double)chordNames.Count / tokens.Length >= 0.5)
             {
                 foreach (var t in chordNames)
+                {
                     if (seen.Add(t))
                     {
                         chords.Add(new Chord(t, defs.GetValueOrDefault(t) ?? ChordLibrary.Lookup(t)));
                     }
+                }
             }
         }
 
         return chords;
     }
 
-    private static Dictionary<string, int[]> ParseChordDefinitions(string text)
+    public static Dictionary<string, int[]> ParseChordDefinitions(string text)
     {
         var result = new Dictionary<string, int[]>(StringComparer.Ordinal);
         var lines  = text.Split('\n');
@@ -220,7 +225,7 @@ public class TabViewModel : ViewModelBase
     /// <c>D/F#</c> then <c>e-x  b-3  g-2  d-0  a-x  e-2</c>. Rows may be ordered high→low
     /// (e b g d a e) or low→high (e a d g b e); both map to the [E A D G B e] fret array.
     /// </summary>
-    private static bool TryParseVerticalDiagram(string[] lines, int index, out string name, out int[] frets)
+    public static bool TryParseVerticalDiagram(string[] lines, int index, out string name, out int[] frets)
     {
         name  = string.Empty;
         frets = [];
@@ -266,7 +271,9 @@ public class TabViewModel : ViewModelBase
 
         var result = new int[6];
         for (int r = 0; r < 6; r++)
+        {
             result[order[r]] = values[r];
+        }
 
         name  = header;
         frets = result;
@@ -274,7 +281,7 @@ public class TabViewModel : ViewModelBase
     }
 
     /// <summary>Parses a fret string like "[xx3210]", "x-0-2-2-1-0", or "x 0 2 2 1 0".</summary>
-    private static int[]? TryParseFrets(string raw)
+    public static int[]? TryParseFrets(string raw)
     {
         var cleaned = raw.Trim('[', ']', ' ');
 
@@ -325,7 +332,7 @@ public class TabViewModel : ViewModelBase
 
     // ── Line parsing ─────────────────────────────────────────────────────────────
 
-    private static IReadOnlyList<TabLine> ParseLines(string? text)
+    public static IReadOnlyList<TabLine> ParseLines(string? text)
     {
         if (string.IsNullOrEmpty(text))
         {

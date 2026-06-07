@@ -61,7 +61,7 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
             return 0f;
         }
         double mean = 0;
-        for (int i = 0; i < signal.Length; i++) mean += signal[i];
+        for (int i = 0; i < signal.Length; i++) { mean += signal[i]; }
         mean /= signal.Length;
 
         double sumSq = 0;
@@ -87,7 +87,9 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
         // only on real hardware.
         double mean = 0;
         for (int i = 0; i < signal.Length; i++)
+        {
             mean += signal[i];
+        }
         mean /= signal.Length;
 
         var x = new double[signal.Length];
@@ -113,7 +115,9 @@ public sealed class AutoCorrelationPitchDetector : IPitchDetector
             double sum = 0;
             int n = signal.Length - lag;
             for (int i = 0; i < n; i++)
+            {
                 sum += x[i] * x[i + lag];
+            }
 
             corr[lag] = sum;
             if (sum > maxPeak)

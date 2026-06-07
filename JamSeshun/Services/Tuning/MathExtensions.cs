@@ -89,10 +89,14 @@ public static class MathExtensions
         var vectorLeft = MemoryMarshal.Cast<Complex, Vector256<double>>(left);
         var vectorRight = MemoryMarshal.Cast<Complex, Vector256<double>>(right);
         for (int i = 0; i < vectorRes.Length; i++)
+        {
             vectorRes[i] = Avx.Subtract(vectorLeft[i], vectorRight[i]);
+        }
 
         for (int i = 2 * vectorRes.Length; i < result.Length; i++)
+        {
             result[i] = left[i] - right[i];
+        }
         return result;
     }
 
@@ -116,7 +120,9 @@ public static class MathExtensions
                     ));
         }
         for (int i = 2 * vectorRes.Length; i < result.Length; i++)
+        {
             result[i] = left[i] * right[i];
+        }
         return result;
     }
 

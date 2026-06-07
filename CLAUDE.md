@@ -29,13 +29,13 @@ dotnet build JamSeshun.Android
 
 ## Project Structure
 
-| Project | Purpose |
-|---|---|
-| `JamSeshun/` | Shared UI library — views, view models, services (cross-platform) |
-| `JamSeshun.Desktop/` | Desktop entry point; registers `WindowsTuningService` (NAudio) |
-| `JamSeshun.Android/` | Android entry point; registers `AndroidTuningService` |
-| `JamSeshun.iOS/` | iOS entry point (stub) |
-| `JamSeshun.Tests/` | xUnit tests using `Avalonia.Headless.XUnit` |
+| Project | Purpose                                                                                          |
+|---|--------------------------------------------------------------------------------------------------|
+| `JamSeshun/` | Shared UI library — views, view models, services (cross-platform)                                |
+| `JamSeshun.Desktop/` | Desktop entry point; registers `SoundFlowTuningService` (SoundFlow Cross Platform Audio library) |
+| `JamSeshun.Android/` | Android entry point; registers `AndroidTuningService` (Native Android Audio)                     |
+| `JamSeshun.iOS/` | iOS entry point (stub)                                                                           |
+| `JamSeshun.Tests/` | xUnit tests using `Avalonia.Headless.XUnit`                                                      |
 
 ## Architecture
 
@@ -55,9 +55,69 @@ dotnet build JamSeshun.Android
 **Key dependencies:**
 - `Avalonia` + `CommunityToolkit.Mvvm` — UI and MVVM bindings
 - `System.Reactive` — all async audio data is modeled as `IObservable<T>`; globally imported in the shared project
-- `NAudio` (Desktop only) — audio capture on Windows
+- `SoundFlow` (Desktop only) — audio capture on Windows and Linux
 - `MathNet.Numerics` — used in FFT processing
 - `HtmlAgilityPack` + `Newtonsoft.Json` — used by `GuitarTabsService` for scraping/parsing tab data
+
+## Code Style
+
+Enforced via `.editorconfig` + `<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>` in `Directory.Build.props` — violations are **build errors**.
+
+- **Braces required** on every `if`, `else`, `for`, `foreach`, `while`, `do` block, even single-line bodies.
+- **`this.` required** on all instance member access (fields, properties, methods, events).
+- **Private fields: camelCase, no `_` prefix.** e.g. `private int count;` not `private int _count;`
+- **Constants: PascalCase.** e.g. `private const int MaxRetries = 3;`
+
+> Naming violations (`IDE1006`) currently surface in the IDE only — `EnforceCodeStyleInBuild` does not yet catch them at the command line without `<AnalysisMode>All</AnalysisMode>`. Treat IDE squiggles as binding.
+
+## Event Handling Policy
+
+All event subscriptions in views and view models must follow these three rules:
+
+**1. Rx observables with IDisposable cleanup.**
+Never use bare `+=` subscriptions. Use `Observable.FromEventPattern`, `Observable.FromEvent`, or `Interactive.AsObservable` (see `Services/RoutedEventExtensions.cs`), and store the returned `IDisposable` in a `CompositeDisposable`. Views dispose in `OnDetachedFromVisualTree`; view models dispose in `Dispose()`.
+Never declare `event` on view models or services, instead define a `Subject<T>` or `BehaviourSubject<T>` to allow clean multi-subscription, time shifting, buffering and enforced disposal.
+
+```csharp
+// CLR event (e.g. Button.Click)
+this.disposables.Add(
+    Observable.FromEventPattern<RoutedEventArgs>(h => this.MyButton.Click += h, h => this.MyButton.Click -= h)
+        .Subscribe(_ => this.HandleClick())
+);
+
+// Routed event with AddHandler/RemoveHandler
+this.disposables.Add(
+    this.myControl.AsObservable(PointerPressedEvent, RoutingStrategies.Bubble)
+        .Subscribe(e => this.HandlePointer(e))
+);
+
+// IObservable<T> on a view model
+this.disposables.Add(vm.Saved.Subscribe(_ => this.HandleSaved()));
+```
+
+**2. No data loading in constructors.**
+Constructors must only assign fields and wire commands. All I/O, DB reads, and service calls must be triggered explicitly:
+- Views: load inside `OnAttachedToVisualTree` or a method called from it.
+- View models: expose a `Load()` or `LoadAsync()` method; the view calls it on attach.
+
+**3. I/O and DB reads off the UI thread.**
+Wrap all `LiteDB`/file reads in `Task.Run(...)`. After the background work completes, marshal UI updates back via `ObserveOn(AvaloniaScheduler.Instance)` or the default `await` continuation (which resumes on the UI `SynchronizationContext`).
+
+```csharp
+// ViewModel: Changed subscription fetches off UI thread, applies on UI thread
+this.library.Changed
+    .SelectMany(_ => Observable.FromAsync(async ct =>
+        await Task.Run(() => this.library.GetAll().ToList(), ct)))
+    .ObserveOn(AvaloniaScheduler.Instance)
+    .Subscribe(this.ApplyResults);
+
+// ViewModel: async load method
+public async Task LoadAllAsync()
+{
+    var data = await Task.Run(() => this.library.GetAll().ToList());
+    this.ApplyResults(data); // called on UI thread via await continuation
+}
+```
 
 ## Notes
 

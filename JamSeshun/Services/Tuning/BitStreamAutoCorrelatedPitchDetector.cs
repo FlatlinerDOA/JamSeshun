@@ -93,7 +93,9 @@ public sealed class BitStreamAutoCorrelatedPitchDetector : IPitchDetector
         int startIndex = 0;
 
         for (; startIndex < correlationCounts.Length && correlationCounts[startIndex] <= 0.0f; ++startIndex)
+        {
             prev = correlationCounts[startIndex];
+        }
 
         // Ensure we don't go out of bounds in the next step
         if (estIndex == 0 || estIndex - 1 >= correlationCounts.Length || startIndex >= correlationCounts.Length)
@@ -108,7 +110,9 @@ public sealed class BitStreamAutoCorrelatedPitchDetector : IPitchDetector
         // Get the next edge
         int nextIndex = estIndex - 1;
         for (; nextIndex < correlationCounts.Length && correlationCounts[nextIndex] <= 0.0f; ++nextIndex)
+        {
             prev = correlationCounts[nextIndex];
+        }
         dy = correlationCounts[nextIndex] - prev;
         float dx2 = -prev / dy;
 

@@ -129,6 +129,8 @@ public class TabChordParsingSpec
 
         // Specifically none of the previously-leaking false positives.
         foreach (var bogus in new[] { "Chorus", "Come", "Breathe", "And", "F#", "A", "B", "E" })
+        {
             Assert.DoesNotContain(bogus, names);
+        }
     }
 }

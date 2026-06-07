@@ -72,7 +72,9 @@ public sealed class TunerViewModel : ViewModelBase, IDisposable
             {
                 this.Devices.Clear();
                 foreach (var d in devices)
+                {
                     this.Devices.Add(d);
+                }
                 this.SelectedDevice ??= devices.FirstOrDefault(d => d.IsDefault) ?? devices.FirstOrDefault();
             });
     }
@@ -182,8 +184,8 @@ public sealed class TunerViewModel : ViewModelBase, IDisposable
             // Locked: always measure error against the pinned string.
             var note = this.targetTuning.Strings[this.lockedStringIndex];
             float f = freq;
-            while (f > note.Frequency * 1.5f) f /= 2f;
-            while (f < note.Frequency / 1.5f) f *= 2f;
+            while (f > note.Frequency * 1.5f) { f /= 2f; }
+            while (f < note.Frequency / 1.5f) { f *= 2f; }
             this.SetTargetString(this.lockedStringIndex, (float)(1200.0 * Math.Log2(f / note.Frequency)));
             return;
         }
@@ -192,8 +194,8 @@ public sealed class TunerViewModel : ViewModelBase, IDisposable
             .Select((note, i) =>
             {
                 float f = freq;
-                while (f > note.Frequency * 1.5f) f /= 2f;
-                while (f < note.Frequency / 1.5f) f *= 2f;
+                while (f > note.Frequency * 1.5f) { f /= 2f; }
+                while (f < note.Frequency / 1.5f) { f *= 2f; }
                 return (i, cents: (float)(1200.0 * Math.Log2(f / note.Frequency)));
             })
             .MinBy(x => Math.Abs(x.cents));

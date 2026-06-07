@@ -1,0 +1,57 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{csproj,props,targets,xml,axaml,xaml}]
+indent_size = 2
+
+[*.cs]
+
+# ── Braces ───────────────────────────────────────────────────────────────────
+csharp_prefer_braces = true:error
+
+# ── this. qualification ───────────────────────────────────────────────────────
+dotnet_style_qualification_for_field    = true:error
+dotnet_style_qualification_for_property = true:error
+dotnet_style_qualification_for_method   = true:error
+dotnet_style_qualification_for_event    = true:error
+
+# ── Naming: private fields — camelCase, no underscore ────────────────────────
+
+dotnet_naming_rule.private_fields_camel_case.symbols  = private_instance_fields
+dotnet_naming_rule.private_fields_camel_case.style    = camel_case
+dotnet_naming_rule.private_fields_camel_case.severity = error
+
+dotnet_naming_symbols.private_instance_fields.applicable_kinds          = field
+dotnet_naming_symbols.private_instance_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_instance_fields.required_modifiers         =
+
+dotnet_naming_style.camel_case.capitalization = camel_case
+
+# Constants and static readonly stay PascalCase
+dotnet_naming_rule.constants_pascal_case.symbols  = constants
+dotnet_naming_rule.constants_pascal_case.style    = pascal_case
+dotnet_naming_rule.constants_pascal_case.severity = error
+
+dotnet_naming_symbols.constants.applicable_kinds          = field
+dotnet_naming_symbols.constants.applicable_accessibilities = private, internal, protected, public
+dotnet_naming_symbols.constants.required_modifiers         = const
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+# ── Language features ─────────────────────────────────────────────────────────
+csharp_style_var_for_built_in_types    = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere             = true:suggestion
+
+dotnet_style_object_initializer       = true:suggestion
+dotnet_style_collection_initializer   = true:suggestion
+dotnet_style_prefer_auto_properties   = true:suggestion
+dotnet_style_null_propagation         = true:suggestion
+dotnet_style_coalesce_expression      = true:suggestion

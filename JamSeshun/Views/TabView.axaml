@@ -145,7 +145,7 @@
                   HorizontalScrollBarVisibility="Auto">
       <ItemsControl ItemsSource="{Binding Lines}" Padding="16,14,16,24">
         <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:TabLine">
+          <DataTemplate x:DataType="services:TabLine">
             <TextBlock Text="{Binding Text}"
                        Foreground="{Binding ForegroundBrush}"
                        FontFamily="avares://JamSeshun/Assets/Fonts#JetBrains Mono"

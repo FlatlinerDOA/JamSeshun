@@ -9,47 +9,22 @@ namespace JamSeshun.Views;
 
 public partial class TabEditorView : UserControl
 {
-    private readonly CompositeDisposable disposables = new();
-    private IDisposable? vmSubscription;
+    private readonly IDisposable wiring;
 
     public TabEditorView()
     {
         this.InitializeComponent();
-    }
 
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnAttachedToVisualTree(e);
-
-        this.disposables.Add(
-            Observable.FromEventPattern<RoutedEventArgs>(
-                    h => this.BackButton.Click += h, h => this.BackButton.Click -= h)
-                .Subscribe(async void (_) => await this.PopAsync())
-        );
-
-        this.disposables.Add(
-            Observable.FromEventPattern(this, nameof(DataContextChanged))
-                .Subscribe(_ => this.OnDataContextUpdated())
-        );
-
-        this.OnDataContextUpdated();
-    }
-
-    private void OnDataContextUpdated()
-    {
-        this.vmSubscription?.Dispose();
-        if (this.DataContext is not TabEditorViewModel vm)
+        this.wiring = this.WireOnShow(dataContext =>
         {
-            return;
-        }
-
-        var vmDisposables = new CompositeDisposable
-        {
-            Observable.FromEvent(h => vm.Saved += h, h => vm.Saved -= h)
-                .Subscribe(async void (_) => await this.PopAsync()),
-
-            Observable.FromEvent(h => vm.Deleted += h, h => vm.Deleted -= h)
-                .Subscribe(async void (_) =>
+            if (dataContext is not TabEditorViewModel vm)
+            {
+                return null;
+            }
+            return new CompositeDisposable
+            {
+                vm.Saved.Subscribe(async void (_) => await this.PopAsync()),
+                vm.Deleted.Subscribe(async void (_) =>
                 {
                     var nav = this.FindAncestorOfType<NavigationPage>();
                     if (nav == null)
@@ -59,16 +34,12 @@ public partial class TabEditorView : UserControl
                     await nav.PopAsync(); // editor → tab viewer
                     await nav.PopAsync(); // tab viewer → songs list
                 })
-        };
-        this.vmSubscription = vmDisposables;
-    }
+            };
+        });
 
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnDetachedFromVisualTree(e);
-        this.vmSubscription?.Dispose();
-        this.vmSubscription = null;
-        this.disposables.Clear();
+        Observable.FromEventPattern<RoutedEventArgs>(
+                h => this.BackButton.Click += h, h => this.BackButton.Click -= h)
+            .Subscribe(async void (_) => await this.PopAsync());
     }
 
     private async Task PopAsync()

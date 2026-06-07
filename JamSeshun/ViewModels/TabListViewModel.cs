@@ -6,7 +6,7 @@ using JamSeshun.Services;
 
 namespace JamSeshun.ViewModels;
 
-public partial class TabListViewModel : ViewModelBase, IDisposable
+public partial class TabListViewModel : ViewModelBase, IOnShow, IDisposable
 {
     private readonly TabLibraryService? library;
     private string searchQuery = string.Empty;
@@ -32,13 +32,20 @@ public partial class TabListViewModel : ViewModelBase, IDisposable
     public TabListViewModel(TabLibraryService library) : this()
     {
         this.library = library;
-        this.disposables.Add(
-            this.library.Changed
-                .SelectMany(_ => Observable.FromAsync(async ct =>
-                    await Task.Run(() => this.library.GetAll().OrderBy(e => SongPart(e.Name)).ToList(), ct)))
-                .ObserveOn(AvaloniaScheduler.Instance)
-                .Subscribe(this.ApplyTabs)
-        );
+    }
+
+    public IDisposable OnShow()
+    {
+        _ = this.LoadAllAsync();
+        if (this.library == null)
+        {
+            return Disposable.Empty;
+        }
+        return this.library.Changed
+            .SelectMany(_ => Observable.FromAsync(async ct =>
+                await Task.Run(() => this.library.GetAll().OrderBy(e => SongPart(e.Name)).ToList(), ct)))
+            .ObserveOn(AvaloniaScheduler.Instance)
+            .Subscribe(this.ApplyTabs);
     }
 
     public async Task LoadAllAsync()

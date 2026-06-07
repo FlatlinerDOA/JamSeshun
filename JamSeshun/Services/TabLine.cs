@@ -1,15 +1,15 @@
 using Avalonia.Media;
 
-namespace JamSeshun.ViewModels;
+namespace JamSeshun.Services;
 
 public enum TabLineKind { Blank, Section, Chord, TabString, Lyric }
 
 public record TabLine(TabLineKind Kind, string Text)
 {
-    private static readonly IBrush ChordBrush   = new SolidColorBrush(Color.Parse("#7fc0f4"));
-    private static readonly IBrush TabBrush     = new SolidColorBrush(Color.Parse("#4ade80"));
-    private static readonly IBrush SectionBrush = new SolidColorBrush(Color.Parse("#f1f5f9"));
-    private static readonly IBrush LyricBrush   = new SolidColorBrush(Color.Parse("#d1d5db"));
+    public static readonly IBrush ChordBrush   = new SolidColorBrush(Color.Parse("#7fc0f4"));
+    public static readonly IBrush TabBrush     = new SolidColorBrush(Color.Parse("#4ade80"));
+    public static readonly IBrush SectionBrush = new SolidColorBrush(Color.Parse("#f1f5f9"));
+    public static readonly IBrush LyricBrush   = new SolidColorBrush(Color.Parse("#d1d5db"));
 
     public IBrush ForegroundBrush => this.Kind switch
     {

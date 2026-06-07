@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
-using System.Reactive.Disposables;
 using JamSeshun.Services.Tuning;
 using JamSeshun.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,50 +10,31 @@ namespace JamSeshun.Views;
 
 public partial class TabView : UserControl
 {
-    private readonly CompositeDisposable disposables = new();
-    private IDisposable? editorSavedSubscription;
+    private readonly IDisposable wiring;
 
     public TabView()
     {
         this.InitializeComponent();
-    }
+        this.wiring = this.WireOnShow();
 
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnAttachedToVisualTree(e);
-
-        this.disposables.Add(
-            Observable.FromEventPattern<RoutedEventArgs>(
-                    h => this.BackButton.Click += h, h => this.BackButton.Click -= h)
-                .Subscribe(async void (_) =>
+        Observable.FromEventPattern<RoutedEventArgs>(
+                h => this.BackButton.Click += h, h => this.BackButton.Click -= h)
+            .Subscribe(async void (_) =>
+            {
+                var nav = this.FindAncestorOfType<NavigationPage>();
+                if (nav != null)
                 {
-                    var nav = this.FindAncestorOfType<NavigationPage>();
-                    if (nav != null)
-                    {
-                        await nav.PopAsync();
-                    }
-                })
-        );
+                    await nav.PopAsync();
+                }
+            });
 
-        this.disposables.Add(
-            Observable.FromEventPattern<RoutedEventArgs>(
-                    h => this.EditButton.Click += h, h => this.EditButton.Click -= h)
-                .Subscribe(async void (_) => await this.OnEditClicked())
-        );
+        Observable.FromEventPattern<RoutedEventArgs>(
+                h => this.EditButton.Click += h, h => this.EditButton.Click -= h)
+            .Subscribe(async void (_) => await this.OnEditClicked());
 
-        this.disposables.Add(
-            Observable.FromEventPattern<RoutedEventArgs>(
-                    h => this.TuneButton.Click += h, h => this.TuneButton.Click -= h)
-                .Subscribe(_ => this.OnTuneClicked())
-        );
-    }
-
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnDetachedFromVisualTree(e);
-        this.editorSavedSubscription?.Dispose();
-        this.editorSavedSubscription = null;
-        this.disposables.Clear();
+        Observable.FromEventPattern<RoutedEventArgs>(
+                h => this.TuneButton.Click += h, h => this.TuneButton.Click -= h)
+            .Subscribe(_ => this.OnTuneClicked());
     }
 
     private async Task OnEditClicked()
@@ -73,11 +53,6 @@ public partial class TabView : UserControl
 
         var editorVm = App.ServiceProvider.GetRequiredService<TabEditorViewModel>();
         editorVm.LoadForEdit(tabVm.Id.Value, tabVm.Tab);
-
-        this.editorSavedSubscription?.Dispose();
-        this.editorSavedSubscription = Observable.FromEvent(
-                h => editorVm.Saved += h, h => editorVm.Saved -= h)
-            .Subscribe(_ => tabVm.ReloadTab());
 
         var editorView  = new TabEditorView { DataContext = editorVm };
         var contentPage = new ContentPage { Content = editorView };

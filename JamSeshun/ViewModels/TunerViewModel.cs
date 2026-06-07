@@ -8,7 +8,7 @@ namespace JamSeshun.ViewModels;
 
 public record TuningStringDisplay(int Index, string NoteName, bool IsActive, bool IsInTune, bool IsLocked);
 
-public sealed class TunerViewModel : ViewModelBase, IDisposable
+public sealed class TunerViewModel : ViewModelBase, IOnShow, IDisposable
 {
     private readonly ITuningService? tuningService;
     private float currentFrequency;
@@ -61,12 +61,9 @@ public sealed class TunerViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private IDisposable? devicesSubscription;
-
-    public void Load()
+    public IDisposable OnShow()
     {
-        this.devicesSubscription?.Dispose();
-        this.devicesSubscription = this.tuningService?.GetAudioCaptureDevices()
+        return this.tuningService?.GetAudioCaptureDevices()
             .ObserveOn(AvaloniaScheduler.Instance)
             .Subscribe(devices =>
             {
@@ -76,7 +73,7 @@ public sealed class TunerViewModel : ViewModelBase, IDisposable
                     this.Devices.Add(d);
                 }
                 this.SelectedDevice ??= devices.FirstOrDefault(d => d.IsDefault) ?? devices.FirstOrDefault();
-            });
+            }) ?? Disposable.Empty;
     }
 
     private IDisposable? recordingSession;
@@ -363,7 +360,6 @@ public sealed class TunerViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
-        this.devicesSubscription?.Dispose();
         this.recordingSession?.Dispose();
     }
 }

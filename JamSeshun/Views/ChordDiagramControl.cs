@@ -36,8 +36,8 @@ public class ChordDiagramControl : Control
     private const int BottomPad    = 6;
     private const int DotRadius    = 4;
 
-    private static readonly int DiagramWidth  = LeftPad + (StringCount - 1) * StringGap + RightPad;
-    private static readonly int DiagramHeight = TopPad + FretCount * FretGap + BottomPad;
+    private const int DiagramWidth  = LeftPad + (StringCount - 1) * StringGap + RightPad;
+    private const int DiagramHeight = TopPad + FretCount * FretGap + BottomPad;
 
     protected override Size MeasureOverride(Size _) =>
         new(DiagramWidth, DiagramHeight);

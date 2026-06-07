@@ -1,9 +1,11 @@
+using System.Reactive.Disposables;
+using System.Reactive.Subjects;
 using CommunityToolkit.Mvvm.Input;
 using JamSeshun.Services;
 
 namespace JamSeshun.ViewModels;
 
-public class TabEditorViewModel : ViewModelBase
+public class TabEditorViewModel : ViewModelBase, IDisposable
 {
     private readonly TabLibraryService? library;
     private Guid? editingId;
@@ -16,17 +18,21 @@ public class TabEditorViewModel : ViewModelBase
 
     public TabEditorViewModel()
     {
-        this.SaveCommand         = new RelayCommand(this.Save, this.CanSave);
-        this.DeleteCommand       = new RelayCommand(() => this.IsConfirmingDelete = true, () => this.editingId.HasValue);
+        this.SaveCommand = new RelayCommand(this.Save, this.CanSave);
+        this.DeleteCommand = new RelayCommand(() => this.IsConfirmingDelete = true, () => this.editingId.HasValue);
         this.ConfirmDeleteCommand = new RelayCommand(this.Delete);
-        this.CancelDeleteCommand  = new RelayCommand(() => this.IsConfirmingDelete = false);
-        this.ClearCommand        = new RelayCommand(this.Clear);
-        this.IncrementCapoCommand = new RelayCommand(() => { if (this.capo < 12)
+        this.CancelDeleteCommand = new RelayCommand(() => this.IsConfirmingDelete = false);
+        this.ClearCommand = new RelayCommand(this.Clear);
+        this.IncrementCapoCommand = new RelayCommand(() =>
+        {
+            if (this.capo < 12)
             {
                 this.Capo = this.capo + 1;
             }
         });
-        this.DecrementCapoCommand = new RelayCommand(() => { if (this.capo > 0)
+        this.DecrementCapoCommand = new RelayCommand(() =>
+        {
+            if (this.capo > 0)
             {
                 this.Capo = this.capo - 1;
             }
@@ -43,27 +49,33 @@ public class TabEditorViewModel : ViewModelBase
     public string Artist
     {
         get => this.artist;
-        set {
+        set
+        {
             this.SetProperty(ref this.artist, value);
             this.SaveCommand.NotifyCanExecuteChanged();
-            this.SavedMessage = string.Empty; }
+            this.SavedMessage = string.Empty;
+        }
     }
 
     public string Song
     {
         get => this.song;
-        set {
+        set
+        {
             this.SetProperty(ref this.song, value);
             this.SaveCommand.NotifyCanExecuteChanged();
-            this.SavedMessage = string.Empty; }
+            this.SavedMessage = string.Empty;
+        }
     }
 
     public string Content
     {
         get => this.content;
-        set {
+        set
+        {
             this.SetProperty(ref this.content, value);
-            this.SavedMessage = string.Empty; }
+            this.SavedMessage = string.Empty;
+        }
     }
 
     public string Tuning
@@ -75,9 +87,11 @@ public class TabEditorViewModel : ViewModelBase
     public int Capo
     {
         get => this.capo;
-        set {
+        set
+        {
             this.SetProperty(ref this.capo, value);
-            this.OnPropertyChanged(nameof(TabEditorViewModel.CapoLabel)); }
+            this.OnPropertyChanged(nameof(TabEditorViewModel.CapoLabel));
+        }
     }
 
     public string CapoLabel => this.capo > 0 ? $"Capo {this.capo}" : "Capo";
@@ -85,15 +99,17 @@ public class TabEditorViewModel : ViewModelBase
     public string SavedMessage
     {
         get => this.savedMessage;
-        private set {
+        private set
+        {
             this.SetProperty(ref this.savedMessage, value);
-            this.OnPropertyChanged(nameof(TabEditorViewModel.HasSavedMessage)); }
+            this.OnPropertyChanged(nameof(TabEditorViewModel.HasSavedMessage));
+        }
     }
 
     public bool HasSavedMessage => !string.IsNullOrEmpty(this.savedMessage);
 
-    public event Action? Saved;
-    public event Action? Deleted;
+    public Subject<Unit> Saved { get; } = new();
+    public Subject<Unit> Deleted { get; } = new();
 
     private bool isConfirmingDelete;
     public bool IsConfirmingDelete
@@ -126,8 +142,7 @@ public class TabEditorViewModel : ViewModelBase
         this.DeleteCommand.NotifyCanExecuteChanged();
     }
 
-    private bool CanSave() =>
-        !string.IsNullOrWhiteSpace(this.artist) && !string.IsNullOrWhiteSpace(this.song);
+    private bool CanSave() => !string.IsNullOrWhiteSpace(this.artist) && !string.IsNullOrWhiteSpace(this.song);
 
     private void Delete()
     {
@@ -137,7 +152,7 @@ public class TabEditorViewModel : ViewModelBase
         }
         this.IsConfirmingDelete = false;
         this.library.Delete(this.editingId.Value);
-        Deleted?.Invoke();
+        this.Deleted.OnNext(Unit.Default);
     }
 
     private void Save()
@@ -150,7 +165,7 @@ public class TabEditorViewModel : ViewModelBase
         this.editingId ??= Guid.NewGuid();
         this.library.Save(this.editingId.Value, $"{tab.Artist} - {tab.Song}", tab);
         this.SavedMessage = "Saved!";
-        Saved?.Invoke();
+        this.Saved.OnNext(Unit.Default);
     }
 
     private void Clear()
@@ -165,5 +180,11 @@ public class TabEditorViewModel : ViewModelBase
         this.OnPropertyChanged(nameof(TabEditorViewModel.Title));
         this.OnPropertyChanged(nameof(TabEditorViewModel.CanDelete));
         this.DeleteCommand.NotifyCanExecuteChanged();
+    }
+
+    public void Dispose()
+    {
+        this.Saved.Dispose();
+        this.Deleted.Dispose();
     }
 }

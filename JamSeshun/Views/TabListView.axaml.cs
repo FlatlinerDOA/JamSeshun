@@ -1,6 +1,4 @@
 using System.ComponentModel;
-using System.Reactive.Disposables;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -13,63 +11,40 @@ namespace JamSeshun.Views;
 
 public partial class TabListView : UserControl
 {
-    private readonly CompositeDisposable disposables = new();
-    private IDisposable? vmSubscription;
+    private static readonly FilePickerFileType tabFileTypes = new("Tab files")
+    {
+        Patterns = ["*.txt"],
+        MimeTypes = ["text/plain"]
+    };
+
+    private readonly IDisposable wiring;
     private TabListViewModel? vm;
 
     public TabListView()
     {
         this.InitializeComponent();
-    }
 
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnAttachedToVisualTree(e);
-
-        this.disposables.Add(
-            Observable.FromEventPattern<RoutedEventArgs>(
-                    h => this.NewTabButton.Click += h, h => this.NewTabButton.Click -= h)
-                .Subscribe(async void (_) => await this.OnNewTabClicked())
-        );
-
-        this.disposables.Add(
-            Observable.FromEventPattern<RoutedEventArgs>(
-                    h => this.ImportButton.Click += h, h => this.ImportButton.Click -= h)
-                .Subscribe(async void (_) => await this.OnImportClicked())
-        );
-
-        this.disposables.Add(
-            Observable.FromEventPattern(this, nameof(DataContextChanged))
-                .Subscribe(_ => this.OnDataContextUpdated())
-        );
-
-        this.OnDataContextUpdated();
-    }
-
-    private void OnDataContextUpdated()
-    {
-        this.vmSubscription?.Dispose();
-        this.vm = this.DataContext as TabListViewModel;
-        if (this.vm == null)
+        this.wiring = this.WireOnShow(dataContext =>
         {
-            return;
-        }
+            this.vm = dataContext as TabListViewModel;
+            if (this.vm == null)
+            {
+                return null;
+            }
+            return Observable.FromEventPattern<PropertyChangedEventHandler, PropertyChangedEventArgs>(
+                    h => this.vm.PropertyChanged += h,
+                    h => this.vm.PropertyChanged -= h)
+                .Where(ep => ep.EventArgs.PropertyName == nameof(TabListViewModel.SelectedTabReference))
+                .Subscribe(async void (_) => await this.OnSelectedTabReferenceChanged());
+        });
 
-        _ = this.vm.LoadAllAsync();
+        Observable.FromEventPattern<RoutedEventArgs>(
+                h => this.NewTabButton.Click += h, h => this.NewTabButton.Click -= h)
+            .Subscribe(async void (_) => await this.OnNewTabClicked());
 
-        this.vmSubscription = Observable.FromEventPattern<PropertyChangedEventHandler, PropertyChangedEventArgs>(
-                h => this.vm.PropertyChanged += h,
-                h => this.vm.PropertyChanged -= h)
-            .Where(ep => ep.EventArgs.PropertyName == nameof(TabListViewModel.SelectedTabReference))
-            .Subscribe(async void (_) => await this.OnSelectedTabReferenceChanged());
-    }
-
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnDetachedFromVisualTree(e);
-        this.vmSubscription?.Dispose();
-        this.vmSubscription = null;
-        this.disposables.Clear();
+        Observable.FromEventPattern<RoutedEventArgs>(
+                h => this.ImportButton.Click += h, h => this.ImportButton.Click -= h)
+            .Subscribe(async void (_) => await this.OnImportClicked());
     }
 
     private async Task OnSelectedTabReferenceChanged()
@@ -87,8 +62,8 @@ public partial class TabListView : UserControl
         }
 
         var library = App.ServiceProvider.GetRequiredService<TabLibraryService>();
-        var vm = new TabViewModel(library);
-        var tabView = new TabView { DataContext = vm };
+        var tabVm = new TabViewModel(library);
+        var tabView = new TabView { DataContext = tabVm };
         var contentPage = new ContentPage { Content = tabView };
         NavigationPage.SetHasNavigationBar(contentPage, false);
 
@@ -102,8 +77,8 @@ public partial class TabListView : UserControl
         var savedTab = this.vm?.LoadTab(tabRef.Id);
         if (savedTab != null)
         {
-            vm.Id  = tabRef.Id;
-            vm.Tab = savedTab;
+            tabVm.Id  = tabRef.Id;
+            tabVm.Tab = savedTab;
         }
     }
 
@@ -123,12 +98,6 @@ public partial class TabListView : UserControl
         await navPage.PushAsync(contentPage);
     }
 
-    private static readonly FilePickerFileType TxtFiles = new("Tab files")
-    {
-        Patterns = ["*.txt"],
-        MimeTypes = ["text/plain"]
-    };
-
     private async Task OnImportClicked()
     {
         if (this.vm == null)
@@ -146,7 +115,7 @@ public partial class TabListView : UserControl
         {
             Title = "Import Tabs",
             AllowMultiple = true,
-            FileTypeFilter = [TxtFiles]
+            FileTypeFilter = [tabFileTypes]
         });
 
         if (files.Count == 0)

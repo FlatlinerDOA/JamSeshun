@@ -63,42 +63,80 @@ dotnet build JamSeshun.Android
 
 Enforced via `.editorconfig` + `<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>` in `Directory.Build.props` — violations are **build errors**.
 
-- **Braces required** on every `if`, `else`, `for`, `foreach`, `while`, `do` block, even single-line bodies.
+- **Allman braces** — `{` and `}` always on their own line. Required on every `if`, `else`, `for`, `foreach`, `while`, `do` block, even single-line bodies.
 - **`this.` required** on all instance member access (fields, properties, methods, events).
 - **Private fields: camelCase, no `_` prefix.** e.g. `private int count;` not `private int _count;`
 - **Constants: PascalCase.** e.g. `private const int MaxRetries = 3;`
+- **Files must live in the folder that matches their namespace.** `JamSeshun.Services` → `JamSeshun/Services/`, `JamSeshun.ViewModels` → `JamSeshun/ViewModels/`, etc. Use `git mv` when relocating.
 
-> Naming violations (`IDE1006`) currently surface in the IDE only — `EnforceCodeStyleInBuild` does not yet catch them at the command line without `<AnalysisMode>All</AnalysisMode>`. Treat IDE squiggles as binding.
+> **Build-enforced:** braces present (`IDE0011`), `this.` qualification (`IDE0003`).
+> **IDE-only (treat squiggles as binding):** Allman brace placement (`IDE0055` — formatting rules are not enforced by `EnforceCodeStyleInBuild`; run `dotnet format --verify-no-changes` to check); naming style (`IDE1006` — requires `<AnalysisMode>All</AnalysisMode>`).
 
 ## Event Handling Policy
 
 All event subscriptions in views and view models must follow these three rules:
 
 **1. Rx observables with IDisposable cleanup.**
-Never use bare `+=` subscriptions. Use `Observable.FromEventPattern`, `Observable.FromEvent`, or `Interactive.AsObservable` (see `Services/RoutedEventExtensions.cs`), and store the returned `IDisposable` in a `CompositeDisposable`. Views dispose in `OnDetachedFromVisualTree`; view models dispose in `Dispose()`.
-Never declare `event` on view models or services, instead define a `Subject<T>` or `BehaviourSubject<T>` to allow clean multi-subscription, time shifting, buffering and enforced disposal.
+Never use bare `+=` subscriptions. Never declare `event` on view models or services.
+
+- **View model / service signals** → `Subject<T>` (or `BehaviorSubject<T>` when late subscribers need the last value). Expose as `IObservable<T>` if callers should not be able to push. Dispose subjects in `Dispose()`.
+- **Avalonia CLR events** (e.g. `Button.Click`) → `Observable.FromEventPattern`
+- **Avalonia routed events** (e.g. `PointerPressed`) → `control.AsObservable(RoutedEvent)` (see `Services/RoutedEventExtensions.cs`)
+
+Store every subscription `IDisposable` in a `CompositeDisposable`. Views dispose in `OnDetachedFromVisualTree`; view models and services dispose in `Dispose()`.
 
 ```csharp
-// CLR event (e.g. Button.Click)
+// View model signal — declare
+public Subject<Unit> Saved { get; } = new();
+// View model signal — fire
+this.Saved.OnNext(Unit.Default);
+// View — subscribe (no FromEvent needed)
+this.disposables.Add(vm.Saved.Subscribe(_ => this.HandleSaved()));
+
+// Avalonia CLR event
 this.disposables.Add(
-    Observable.FromEventPattern<RoutedEventArgs>(h => this.MyButton.Click += h, h => this.MyButton.Click -= h)
+    Observable.FromEventPattern<RoutedEventArgs>(
+            h => this.MyButton.Click += h, h => this.MyButton.Click -= h)
         .Subscribe(_ => this.HandleClick())
 );
 
-// Routed event with AddHandler/RemoveHandler
+// Avalonia routed event
 this.disposables.Add(
     this.myControl.AsObservable(PointerPressedEvent, RoutingStrategies.Bubble)
         .Subscribe(e => this.HandlePointer(e))
 );
-
-// IObservable<T> on a view model
-this.disposables.Add(vm.Saved.Subscribe(_ => this.HandleSaved()));
 ```
 
-**2. No data loading in constructors.**
-Constructors must only assign fields and wire commands. All I/O, DB reads, and service calls must be triggered explicitly:
-- Views: load inside `OnAttachedToVisualTree` or a method called from it.
-- View models: expose a `Load()` or `LoadAsync()` method; the view calls it on attach.
+**2. No data loading in constructors. Use `IOnShow`.**
+Constructors must only assign fields and wire commands. View models that need to load data implement `IOnShow` (`ViewModels/IOnShow.cs`). `OnShow()` performs the initial load AND subscribes to live change notifications, returning the subscription as an `IDisposable`.
+
+Views call `vm.OnShow()` from `OnDataContextUpdated()` (itself called from both `OnAttachedToVisualTree` and `DataContextChanged`), store the result in `vmSubscription`, and dispose it in `OnDetachedFromVisualTree`. This fires on first show and on every navigate-back.
+
+```csharp
+// ViewModel
+public IDisposable OnShow()
+{
+    _ = this.LoadAllAsync();                  // immediate load
+    return this.library.Changed               // live updates for visible lifetime
+        .ObserveOn(AvaloniaScheduler.Instance)
+        .Subscribe(_ => _ = this.LoadAllAsync());
+}
+
+// View — OnDataContextUpdated (called from OnAttachedToVisualTree + DataContextChanged)
+private void OnDataContextUpdated()
+{
+    this.vmSubscription?.Dispose();
+    if (this.DataContext is IOnShow vm)
+    {
+        this.vmSubscription = vm.OnShow();
+    }
+}
+
+// View — OnDetachedFromVisualTree
+this.vmSubscription?.Dispose();
+this.vmSubscription = null;
+this.disposables.Clear();
+```
 
 **3. I/O and DB reads off the UI thread.**
 Wrap all `LiteDB`/file reads in `Task.Run(...)`. After the background work completes, marshal UI updates back via `ObserveOn(AvaloniaScheduler.Instance)` or the default `await` continuation (which resumes on the UI `SynchronizationContext`).

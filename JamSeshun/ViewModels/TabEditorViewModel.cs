@@ -1,13 +1,12 @@
-using System.Reactive.Disposables;
-using System.Reactive.Subjects;
 using CommunityToolkit.Mvvm.Input;
 using JamSeshun.Services;
 
 namespace JamSeshun.ViewModels;
 
-public class TabEditorViewModel : ViewModelBase, IDisposable
+public class TabEditorViewModel : ViewModelBase
 {
     private readonly TabLibraryService? library;
+    private readonly INavigationService? navigation;
     private Guid? editingId;
     private string artist = string.Empty;
     private string song = string.Empty;
@@ -18,11 +17,12 @@ public class TabEditorViewModel : ViewModelBase, IDisposable
 
     public TabEditorViewModel()
     {
-        this.SaveCommand = new RelayCommand(this.Save, this.CanSave);
-        this.DeleteCommand = new RelayCommand(() => this.IsConfirmingDelete = true, () => this.editingId.HasValue);
+        this.BackCommand    = new AsyncRelayCommand(this.OnBack);
+        this.SaveCommand    = new RelayCommand(this.Save, this.CanSave);
+        this.DeleteCommand  = new RelayCommand(() => this.IsConfirmingDelete = true, () => this.editingId.HasValue);
         this.ConfirmDeleteCommand = new RelayCommand(this.Delete);
-        this.CancelDeleteCommand = new RelayCommand(() => this.IsConfirmingDelete = false);
-        this.ClearCommand = new RelayCommand(this.Clear);
+        this.CancelDeleteCommand  = new RelayCommand(() => this.IsConfirmingDelete = false);
+        this.ClearCommand         = new RelayCommand(this.Clear);
         this.IncrementCapoCommand = new RelayCommand(() =>
         {
             if (this.capo < 12)
@@ -39,9 +39,10 @@ public class TabEditorViewModel : ViewModelBase, IDisposable
         });
     }
 
-    public TabEditorViewModel(TabLibraryService library) : this()
+    public TabEditorViewModel(TabLibraryService library, INavigationService navigation) : this()
     {
         this.library = library;
+        this.navigation = navigation;
     }
 
     public string Title => this.editingId.HasValue ? "Edit Tab" : "New Tab";
@@ -108,9 +109,6 @@ public class TabEditorViewModel : ViewModelBase, IDisposable
 
     public bool HasSavedMessage => !string.IsNullOrEmpty(this.savedMessage);
 
-    public Subject<Unit> Saved { get; } = new();
-    public Subject<Unit> Deleted { get; } = new();
-
     private bool isConfirmingDelete;
     public bool IsConfirmingDelete
     {
@@ -118,10 +116,11 @@ public class TabEditorViewModel : ViewModelBase, IDisposable
         private set => this.SetProperty(ref this.isConfirmingDelete, value);
     }
 
+    public AsyncRelayCommand BackCommand { get; }
     public RelayCommand SaveCommand { get; }
-    public RelayCommand DeleteCommand { get; }        // shows confirmation
-    public RelayCommand ConfirmDeleteCommand { get; } // actually deletes
-    public RelayCommand CancelDeleteCommand { get; }  // hides confirmation
+    public RelayCommand DeleteCommand { get; }
+    public RelayCommand ConfirmDeleteCommand { get; }
+    public RelayCommand CancelDeleteCommand { get; }
     public RelayCommand ClearCommand { get; }
     public RelayCommand IncrementCapoCommand { get; }
     public RelayCommand DecrementCapoCommand { get; }
@@ -152,7 +151,7 @@ public class TabEditorViewModel : ViewModelBase, IDisposable
         }
         this.IsConfirmingDelete = false;
         this.library.Delete(this.editingId.Value);
-        this.Deleted.OnNext(Unit.Default);
+        _ = this.navigation?.PopToRootAsync();
     }
 
     private void Save()
@@ -165,7 +164,7 @@ public class TabEditorViewModel : ViewModelBase, IDisposable
         this.editingId ??= Guid.NewGuid();
         this.library.Save(this.editingId.Value, $"{tab.Artist} - {tab.Song}", tab);
         this.SavedMessage = "Saved!";
-        this.Saved.OnNext(Unit.Default);
+        _ = this.navigation?.PopAsync();
     }
 
     private void Clear()
@@ -182,9 +181,11 @@ public class TabEditorViewModel : ViewModelBase, IDisposable
         this.DeleteCommand.NotifyCanExecuteChanged();
     }
 
-    public void Dispose()
+    private async Task OnBack()
     {
-        this.Saved.Dispose();
-        this.Deleted.Dispose();
+        if (this.navigation != null)
+        {
+            await this.navigation.PopAsync();
+        }
     }
 }

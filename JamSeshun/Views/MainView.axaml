@@ -11,11 +11,11 @@
     <vm:MainViewModel />
   </Design.DataContext>
 
-  <TabbedPage>
+  <TabbedPage x:Name="mainTabs">
     <ContentPage Header="Tuner">
       <views:TunerView DataContext="{Binding TunerVm}" />
     </ContentPage>
-    <NavigationPage Header="Songs">
+    <NavigationPage x:Name="songsNav" Header="Songs">
       <ContentPage NavigationPage.HasNavigationBar="False">
         <views:TabListView DataContext="{Binding TabListVm}" />
       </ContentPage>

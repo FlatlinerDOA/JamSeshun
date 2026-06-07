@@ -52,7 +52,7 @@
     <Border DockPanel.Dock="Top" Background="#0f172a" Padding="0,8,16,8">
       <Grid ColumnDefinitions="Auto,*,Auto,Auto">
         <Button Grid.Column="0"
-                x:Name="BackButton"
+                Command="{Binding BackCommand}"
                 Background="Transparent"
                 BorderThickness="0"
                 Padding="10"

@@ -1,4 +1,5 @@
 using System.Reactive.Disposables;
+using CommunityToolkit.Mvvm.Input;
 using JamSeshun.Services;
 using JamSeshun.Services.Tuning;
 
@@ -7,17 +8,23 @@ namespace JamSeshun.ViewModels;
 public class TabViewModel : ViewModelBase, IOnShow
 {
     private readonly TabLibraryService? library;
+    private readonly INavigationService? navigation;
 
-    public TabViewModel() { }
+    public AsyncRelayCommand BackCommand { get; }
+    public AsyncRelayCommand EditCommand { get; }
+    public AsyncRelayCommand TuneCommand { get; }
 
-    public TabViewModel(SavedTab tab)
+    public TabViewModel()
     {
-        this.tab = tab;
+        this.BackCommand = new AsyncRelayCommand(this.OnBack);
+        this.EditCommand = new AsyncRelayCommand(this.OnEdit);
+        this.TuneCommand = new AsyncRelayCommand(this.OnTune);
     }
 
-    public TabViewModel(TabLibraryService library)
+    public TabViewModel(TabLibraryService library, INavigationService navigation) : this()
     {
         this.library = library;
+        this.navigation = navigation;
     }
 
     public IDisposable OnShow()
@@ -104,4 +111,34 @@ public class TabViewModel : ViewModelBase, IOnShow
         }
     }
 
+    private async Task OnBack()
+    {
+        if (this.navigation != null)
+        {
+            await this.navigation.PopAsync();
+        }
+    }
+
+    private async Task OnEdit()
+    {
+        if (this.navigation == null || this.tab == null || this.Id == null)
+        {
+            return;
+        }
+
+        var id = this.Id.Value;
+        var tab = this.tab;
+        await this.navigation.PushAsync<TabEditorViewModel>(vm => vm.LoadForEdit(id, tab));
+    }
+
+    private async Task OnTune()
+    {
+        var tuning = GuitarTuning.TryParse(this.tab?.Tuning);
+        if (tuning == null || this.navigation == null)
+        {
+            return;
+        }
+
+        await this.navigation.ActivateAsync<TunerViewModel>(vm => vm.TargetTuning = tuning);
+    }
 }

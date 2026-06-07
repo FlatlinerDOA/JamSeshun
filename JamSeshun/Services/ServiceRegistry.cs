@@ -12,6 +12,7 @@ public static class ServiceRegistry
     {
         serviceCollection.AddTransient<TunerViewModel>();
         serviceCollection.AddTransient<TabListViewModel>();
+        serviceCollection.AddTransient<TabViewModel>();
         serviceCollection.AddTransient<PerformanceViewModel>();
         serviceCollection.AddTransient<TabEditorViewModel>();
         serviceCollection.AddTransient<MainViewModel>();
@@ -28,6 +29,10 @@ public static class ServiceRegistry
     public static ServiceCollection WithCommonServices(this ServiceCollection serviceCollection)
     {
         serviceCollection.AddSingleton<TabLibraryService>();
+        serviceCollection.AddSingleton<NavigationService>();
+        serviceCollection.AddSingleton<INavigationService>(sp => sp.GetRequiredService<NavigationService>());
+        serviceCollection.AddSingleton<FilePickerService>();
+        serviceCollection.AddSingleton<IFilePickerService>(sp => sp.GetRequiredService<FilePickerService>());
         return serviceCollection;
     }
 

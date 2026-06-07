@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Reactive.Disposables;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Input;
 using JamSeshun.Services;
 
@@ -8,7 +10,15 @@ namespace JamSeshun.ViewModels;
 
 public partial class TabListViewModel : ViewModelBase, IOnShow, IDisposable
 {
+    private static readonly FilePickerFileType TabFileTypes = new("Tab files")
+    {
+        Patterns = ["*.txt"],
+        MimeTypes = ["text/plain"]
+    };
+
     private readonly TabLibraryService? library;
+    private readonly INavigationService? navigation;
+    private readonly IFilePickerService? filePicker;
     private string searchQuery = string.Empty;
     private TabReferenceViewModel? selectedTabReference;
     private bool isImporting;
@@ -17,8 +27,19 @@ public partial class TabListViewModel : ViewModelBase, IOnShow, IDisposable
     private readonly CompositeDisposable disposables = new();
     private CancellationTokenSource filterCts = new();
 
+    public AsyncRelayCommand NewTabCommand { get; }
+    public AsyncRelayCommand ImportCommand { get; }
+
     public TabListViewModel()
     {
+        this.NewTabCommand = new AsyncRelayCommand(async () =>
+        {
+            if (this.navigation != null)
+            {
+                await this.navigation.PushAsync<TabEditorViewModel>();
+            }
+        });
+        this.ImportCommand = new AsyncRelayCommand(this.OnImportClicked, () => this.CanImport);
         this.disposables.Add(
             Observable.FromEventPattern(this.SearchResults, nameof(this.SearchResults.CollectionChanged))
                 .Subscribe(_ =>
@@ -29,9 +50,11 @@ public partial class TabListViewModel : ViewModelBase, IOnShow, IDisposable
         );
     }
 
-    public TabListViewModel(TabLibraryService library) : this()
+    public TabListViewModel(TabLibraryService library, INavigationService navigation, IFilePickerService filePicker) : this()
     {
         this.library = library;
+        this.navigation = navigation;
+        this.filePicker = filePicker;
     }
 
     public IDisposable OnShow()
@@ -98,7 +121,28 @@ public partial class TabListViewModel : ViewModelBase, IOnShow, IDisposable
     public TabReferenceViewModel? SelectedTabReference
     {
         get => this.selectedTabReference;
-        set => this.SetProperty(ref this.selectedTabReference, value);
+        set
+        {
+            if (value == null || this.navigation == null)
+            {
+                this.SetProperty(ref this.selectedTabReference, value);
+                return;
+            }
+
+            // Reset selection immediately so the list deselects before navigation.
+            this.SetProperty(ref this.selectedTabReference, null);
+
+            var tabRef = value;
+            _ = this.navigation.PushAsync<TabViewModel>(vm =>
+            {
+                var savedTab = this.LoadTab(tabRef.Id);
+                if (savedTab != null)
+                {
+                    vm.Id  = tabRef.Id;
+                    vm.Tab = savedTab;
+                }
+            });
+        }
     }
 
     public ObservableCollection<TabReferenceViewModel> AllTabs { get; } = new();
@@ -143,9 +187,12 @@ public partial class TabListViewModel : ViewModelBase, IOnShow, IDisposable
     public bool IsImporting
     {
         get => this.isImporting;
-        private set {
+        private set
+        {
             this.SetProperty(ref this.isImporting, value);
-            this.OnPropertyChanged(nameof(TabListViewModel.CanImport)); }
+            this.OnPropertyChanged(nameof(TabListViewModel.CanImport));
+            this.ImportCommand.NotifyCanExecuteChanged();
+        }
     }
     public bool CanImport => !this.isImporting;
     public int ImportCurrent { get => this.importCurrent; private set {
@@ -206,6 +253,47 @@ public partial class TabListViewModel : ViewModelBase, IOnShow, IDisposable
                                 : "No valid tabs found";
         this.OnPropertyChanged(nameof(TabListViewModel.ImportStatusMessage));
         this.OnPropertyChanged(nameof(TabListViewModel.HasImportStatus));
+    }
+
+    private async Task OnImportClicked()
+    {
+        if (this.filePicker == null)
+        {
+            return;
+        }
+
+        var files = await this.filePicker.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Import Tabs",
+            AllowMultiple = true,
+            FileTypeFilter = [TabListViewModel.TabFileTypes]
+        });
+
+        if (files.Count == 0)
+        {
+            return;
+        }
+
+        this.BeginImport(files.Count);
+        var saved = 0;
+        try
+        {
+            foreach (var file in files)
+            {
+                string content;
+                await using var stream = await file.OpenReadAsync();
+                using var reader = new StreamReader(stream);
+                content = await reader.ReadToEndAsync();
+                if (await this.ImportOneAsync(file.Name, content))
+                {
+                    saved++;
+                }
+            }
+        }
+        finally
+        {
+            this.EndImport(saved);
+        }
     }
 
     private static string SongPart(string name)

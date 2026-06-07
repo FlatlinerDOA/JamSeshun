@@ -55,15 +55,14 @@
                    Foreground="#e2e8f0"
                    VerticalAlignment="Center" />
         <Button Grid.Column="1"
-                x:Name="ImportButton"
-                IsEnabled="{Binding CanImport}"
+                Command="{Binding ImportCommand}"
                 Background="Transparent" BorderThickness="0"
                 Padding="10,6" Margin="0,0,4,0"
                 ToolTip.Tip="Import tabs">
           <i:Icon Value="fa-solid fa-file-import" FontSize="16" Foreground="#7fc0f4" />
         </Button>
         <Button Grid.Column="2"
-                x:Name="NewTabButton"
+                Command="{Binding NewTabCommand}"
                 Background="Transparent" BorderThickness="0"
                 Padding="10,6"
                 ToolTip.Tip="New tab">

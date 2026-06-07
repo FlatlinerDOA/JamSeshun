@@ -44,7 +44,7 @@
     <Border DockPanel.Dock="Top" Background="#0f172a" Padding="0,8,4,10">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Button Grid.Column="0"
-                x:Name="BackButton"
+                Command="{Binding BackCommand}"
                 Background="Transparent"
                 BorderThickness="0"
                 Padding="10"
@@ -61,7 +61,7 @@
           <TextBlock Text="{Binding Artist}"
                      FontSize="14" Foreground="#94a3b8"
                      TextTrimming="CharacterEllipsis" />
-          <Button x:Name="TuneButton"
+          <Button Command="{Binding TuneCommand}"
                   Background="Transparent" BorderThickness="0"
                   Padding="0" Margin="0,2,0,0"
                   Cursor="Hand"
@@ -80,7 +80,7 @@
                      Margin="0,2,0,0" />
         </StackPanel>
         <Button Grid.Column="2"
-                x:Name="EditButton"
+                Command="{Binding EditCommand}"
                 Background="Transparent"
                 BorderThickness="0"
                 Padding="10"

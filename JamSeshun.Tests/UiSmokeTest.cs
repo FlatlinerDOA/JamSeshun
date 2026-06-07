@@ -73,8 +73,9 @@ public class UiSmokeTest
             Capo: 0,
             DateSaved: DateTimeOffset.Now);
 
+        var vm = new TabViewModel { Tab = sampleTab };
         var window = new Window { Width = 400, Height = 700 };
-        window.Content = new TabView { DataContext = new TabViewModel(sampleTab) };
+        window.Content = new TabView { DataContext = vm };
         window.Show();
 
         var frame = window.CaptureRenderedFrame();

@@ -24,6 +24,6 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore -r iossimulator-arm64
     - name: Test
       run: dotnet test JamSeshun.Tests/JamSeshun.Tests.csproj --no-build --verbosity normal

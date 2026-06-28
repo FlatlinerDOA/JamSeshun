@@ -1,19 +1,35 @@
-﻿using Avalonia;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.iOS;
-
 using Foundation;
+using JamSeshun.Services;
+using JamSeshun.Services.Tuning;
+using Microsoft.Extensions.DependencyInjection;
+using Optris.Icons.Avalonia;
+using Optris.Icons.Avalonia.FontAwesome;
 
 namespace JamSeshun.iOS;
 
-// The UIApplicationDelegate for the application. This class is responsible for launching the 
-// User Interface of the application, as well as listening (and optionally responding) to 
-// application events from iOS.
 [Register("AppDelegate")]
 public partial class AppDelegate : AvaloniaAppDelegate<App>
 {
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
+        IconProvider.Current.Register<FontAwesomeIconProvider>();
+
         return base.CustomizeAppBuilder(builder)
-            .WithInterFont();
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<ITuningService, IosTuningService>();
+            })
+            .WithInterFont()
+            .AfterSetup(_ =>
+            {
+                if (Avalonia.Application.Current?.ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+                {
+                    singleView.MainView = App.ServiceProvider.GetRequiredKeyedService<Control>("MainView");
+                }
+            });
     }
 }

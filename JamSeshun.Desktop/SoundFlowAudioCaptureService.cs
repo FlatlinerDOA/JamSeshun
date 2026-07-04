@@ -12,6 +12,8 @@ using SoundFlow.Structs;
 
 namespace JamSeshun.Desktop;
 
+using System.Collections.Concurrent;
+
 /// <summary>
 /// Raw microphone capture for Windows/Linux via SoundFlow (MiniAudio backend).
 /// Emits 44.1 kHz mono float32 <see cref="AudioFrame"/>s.  Streams are shared per
@@ -23,7 +25,7 @@ internal sealed class SoundFlowAudioCaptureService : IAudioCaptureService, IDisp
     private const int CaptureSampleRate = 44100;
 
     private readonly MiniAudioEngine engine = new();
-    private readonly Dictionary<int, IObservable<AudioFrame>> sharedStreams = new();
+    private readonly ConcurrentDictionary<int, IObservable<AudioFrame>> sharedStreams = new();
     private readonly object gate = new();
 
     public IObservable<IReadOnlyList<AudioCaptureDevice>> GetAudioCaptureDevices() =>
@@ -32,19 +34,8 @@ internal sealed class SoundFlowAudioCaptureService : IAudioCaptureService, IDisp
                 .Select(d => new AudioCaptureDevice((int)d.Id, d.Name, d.IsDefault))
                 .ToList());
 
-    public IObservable<AudioFrame> Capture(AudioCaptureDevice device)
-    {
-        lock (this.gate)
-        {
-            if (!this.sharedStreams.TryGetValue(device.Id, out var stream))
-            {
-                stream = this.CreateCaptureStream(device.Id).Publish().RefCount();
-                this.sharedStreams[device.Id] = stream;
-            }
-
-            return stream;
-        }
-    }
+    public IObservable<AudioFrame> Capture(AudioCaptureDevice device) =>
+        this.sharedStreams.GetOrAdd(device.Id, id => this.CreateCaptureStream(device.Id).Publish().RefCount());
 
     public void Dispose()
     {

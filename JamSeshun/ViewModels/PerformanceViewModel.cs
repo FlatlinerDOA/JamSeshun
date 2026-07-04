@@ -28,9 +28,6 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
     private readonly BehaviorSubject<int> position = new(0);
     private IReadOnlyList<PerformanceLine> performanceLines = [];
     private int currentIndex;
-    private string song = string.Empty;
-    private string artist = string.Empty;
-    private string tuningDisplay = string.Empty;
     private AudioCaptureDevice? guitarDevice;
     private AudioCaptureDevice? voiceDevice;
     private bool audioTrackingEnabled;
@@ -103,8 +100,8 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
     /// <summary>Called by <see cref="TabViewModel"/> during navigation.</summary>
     public void LoadForTab(SavedTab tab)
     {
-        this.song = tab.Song;
-        this.artist = tab.Artist;
+        this.Song = tab.Song;
+        this.Artist = tab.Artist;
 
         var parts = new List<string>(2);
         if (!string.IsNullOrEmpty(tab.Tuning))
@@ -117,7 +114,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
             parts.Add($"Capo {tab.Capo}");
         }
 
-        this.tuningDisplay = string.Join("  ·  ", parts);
+        this.TuningDisplay = string.Join("  ·  ", parts);
         this.performanceLines = WikiTabParser.ParsePerformanceLines(tab.Content);
         this.currentIndex = 0;
         this.position.OnNext(0);
@@ -129,10 +126,10 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
 
     // ── Song metadata ────────────────────────────────────────────────────────
 
-    public string Song => this.song;
-    public string Artist => this.artist;
-    public string TuningDisplay => this.tuningDisplay;
-    public bool HasTuning => !string.IsNullOrEmpty(this.tuningDisplay);
+    public string Song { get; private set; } = string.Empty;
+    public string Artist { get; private set; } = string.Empty;
+    public string TuningDisplay { get; private set; } = string.Empty;
+    public bool HasTuning => !string.IsNullOrEmpty(this.TuningDisplay);
 
     // ── Line state ───────────────────────────────────────────────────────────
 

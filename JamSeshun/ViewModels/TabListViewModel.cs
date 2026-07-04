@@ -12,7 +12,7 @@ using System.Reactive.Linq;
 
 public partial class TabListViewModel : ViewModelBase, IOnShow, IDisposable
 {
-    private static readonly FilePickerFileType TabFileTypes = new("Tab files")
+    public static readonly FilePickerFileType TabFileTypes = new("Tab files")
     {
         Patterns = ["*.txt"],
         MimeTypes = ["text/plain"]

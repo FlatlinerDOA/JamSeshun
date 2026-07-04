@@ -6,9 +6,6 @@ namespace JamSeshun.Services;
 /// </summary>
 public static class ChordLibrary
 {
-    public static int[]? Lookup(string name) =>
-        Chords.TryGetValue(name, out var f) ? f : null;
-
     private static readonly Dictionary<string, int[]> Chords = new(StringComparer.Ordinal)
     {
         // ── A ───────────────────────────────────────────────────────────────
@@ -234,4 +231,6 @@ public static class ChordLibrary
         ["Cmaj7/E"]  = [ 0,  3,  2,  0,  0,  0],
         ["Em7/D"]    = [-1,  0,  0,  0,  0,  0],
     };
+
+    public static int[]? Lookup(string name) => Chords.GetValueOrDefault(name);
 }

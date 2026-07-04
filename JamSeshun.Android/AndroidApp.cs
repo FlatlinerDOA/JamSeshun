@@ -26,7 +26,9 @@ public class AndroidApp : AvaloniaAndroidApplication<App>
         return base.CustomizeAppBuilder(builder)
             .ConfigureServices(services =>
             {
-                ServiceCollectionServiceExtensions.AddSingleton<ITuningService, AndroidTuningService>(services);
+                services.AddSingleton<IAudioCaptureService, AndroidAudioCaptureService>();
+                services.AddSingleton<ITuningService, AndroidTuningService>();
+                services.AddSingleton<IChordTrackerService, ChordTrackerService>();
             })
             .WithInterFont()
             .AfterSetup(_ =>

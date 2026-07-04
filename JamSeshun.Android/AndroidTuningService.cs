@@ -1,5 +1,4 @@
-﻿using Android.Content.PM;
-using Android.Media;
+﻿using Android.Media;
 using JamSeshun.Services.Tuning;
 using System;
 using System.Buffers;
@@ -7,7 +6,6 @@ using System.Collections.Generic;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Threading;
 
 namespace JamSeshun.Android;
 

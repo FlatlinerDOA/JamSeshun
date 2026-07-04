@@ -153,7 +153,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
 
     // Next three lines shown in the preview strip
     public IReadOnlyList<PerformanceLine> UpcomingLines =>
-        this.performanceLines.Skip(this.currentIndex + 3).Take(2).ToList();
+        this.performanceLines.Skip(this.currentIndex + 3).Take(1).ToList();
 
     public bool CanGoNext => this.currentIndex < this.performanceLines.Count - 1;
 

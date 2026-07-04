@@ -1,12 +1,11 @@
 using Avalonia.Controls;
 
-namespace JamSeshun.Views
+namespace JamSeshun.Views;
+
+public partial class PerformanceView : UserControl
 {
-    public partial class PerformanceView : UserControl
+    public PerformanceView()
     {
-        public PerformanceView()
-        {
-            this.InitializeComponent();
-        }
+        this.InitializeComponent();
     }
 }

@@ -42,7 +42,7 @@
 
     <!-- ── Header (with embedded back + edit buttons) ────── -->
     <Border DockPanel.Dock="Top" Background="#0f172a" Padding="0,8,4,10">
-      <Grid ColumnDefinitions="Auto,*,Auto">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
         <Button Grid.Column="0"
                 Command="{Binding BackCommand}"
                 Background="Transparent"
@@ -80,11 +80,21 @@
                      Margin="0,2,0,0" />
         </StackPanel>
         <Button Grid.Column="2"
+                Command="{Binding PerformCommand}"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="10"
+                Margin="4,10,0,10"
+                VerticalAlignment="Center"
+                ToolTip.Tip="Performance mode">
+          <i:Icon Value="fa-solid fa-guitar" FontSize="15" Foreground="#7fc0f4" />
+        </Button>
+        <Button Grid.Column="3"
                 Command="{Binding EditCommand}"
                 Background="Transparent"
                 BorderThickness="0"
                 Padding="10"
-                Margin="10"
+                Margin="0,10,10,10"
                 VerticalAlignment="Center"
                 ToolTip.Tip="Edit tab">
           <i:Icon Value="fa-solid fa-pen" FontSize="15" Foreground="#7fc0f4" />

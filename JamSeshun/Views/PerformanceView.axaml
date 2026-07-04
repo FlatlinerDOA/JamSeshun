@@ -2,7 +2,210 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="JamSeshun.Views.PerformanceView">
-  Welcome to Avalonia!
+             xmlns:vm="using:JamSeshun.ViewModels"
+             xmlns:services="using:JamSeshun.Services"
+             xmlns:views="using:JamSeshun.Views"
+             xmlns:i="https://github.com/projektanker/icons.avalonia"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
+             x:DataType="vm:PerformanceViewModel"
+             x:Class="JamSeshun.Views.PerformanceView"
+             Background="#111827">
+
+  <Design.DataContext>
+    <vm:PerformanceViewModel />
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="Button.nav-btn">
+      <Setter Property="Background" Value="#1e293b" />
+      <Setter Property="BorderBrush" Value="#334155" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Width" Value="72" />
+      <Setter Property="Height" Value="52" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.nav-btn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2a4a7f" />
+    </Style>
+    <Style Selector="Button.nav-btn:disabled /template/ ContentPresenter">
+      <Setter Property="Opacity" Value="0.3" />
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+
+    <!-- ── Header ─────────────────────────────────────────── -->
+    <Border DockPanel.Dock="Top" Background="#0f172a" Padding="0,8,12,10">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Button Grid.Column="0"
+                Command="{Binding BackCommand}"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="10"
+                Margin="10"
+                VerticalAlignment="Center">
+          <i:Icon Value="fa-solid fa-arrow-left" FontSize="15" Foreground="#7fc0f4" />
+        </Button>
+
+        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Song}"
+                     FontSize="20" FontWeight="Bold" Foreground="White"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding Artist}"
+                     FontSize="14" Foreground="#94a3b8"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding TuningDisplay}"
+                     FontSize="12" Foreground="#7fc0f4"
+                     IsVisible="{Binding HasTuning}"
+                     Margin="0,2,0,0" />
+        </StackPanel>
+
+        <TextBlock Grid.Column="2"
+                   Text="{Binding ProgressText}"
+                   FontSize="13" Foreground="#64748b"
+                   VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+
+    <!-- ── Navigation buttons ─────────────────────────────── -->
+    <Border DockPanel.Dock="Bottom" Background="#0f172a" Padding="24,14">
+      <Grid ColumnDefinitions="*,32,*">
+        <Button Grid.Column="0"
+                Classes="nav-btn"
+                Command="{Binding PreviousCommand}"
+                HorizontalAlignment="Right">
+          <i:Icon Value="fa-solid fa-arrow-left" FontSize="18" Foreground="#7fc0f4" />
+        </Button>
+        <Button Grid.Column="2"
+                Classes="nav-btn"
+                Command="{Binding NextCommand}"
+                HorizontalAlignment="Left">
+          <i:Icon Value="fa-solid fa-arrow-right" FontSize="18" Foreground="#7fc0f4" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- ── Empty state ────────────────────────────────────── -->
+    <Border IsVisible="{Binding !HasLines}"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            Padding="32">
+      <StackPanel Spacing="12" HorizontalAlignment="Center">
+        <i:Icon Value="fa-solid fa-music" FontSize="40" Foreground="#334155"
+                HorizontalAlignment="Center" />
+        <TextBlock Text="No chord lines found in this tab."
+                   FontSize="15" Foreground="#64748b"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center" />
+      </StackPanel>
+    </Border>
+
+    <!-- ── Main content ───────────────────────────────────── -->
+    <DockPanel IsVisible="{Binding HasLines}">
+
+      <!-- Upcoming lines preview strip -->
+      <Border DockPanel.Dock="Bottom"
+              Background="#0a0f1e"
+              Padding="16,10">
+        <StackPanel Spacing="4">
+          <TextBlock Text="UPCOMING"
+                     FontSize="9" FontWeight="SemiBold"
+                     Foreground="#334155"
+                     Margin="0,0,0,4" />
+          <ItemsControl ItemsSource="{Binding UpcomingLines}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="services:PerformanceLine">
+                <StackPanel Spacing="1" Margin="0,0,0,6">
+                  <!-- Chord names in a row -->
+                  <ItemsControl ItemsSource="{Binding Chords}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="10" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="services:Chord">
+                        <TextBlock Text="{Binding Name}"
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="#334155" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <!-- Lyric text -->
+                  <TextBlock Text="{Binding LyricText}"
+                             FontSize="12" Foreground="#1e293b"
+                             TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <!-- Current line: section label + chord diagrams + lyric -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="0" Margin="16,20,16,16">
+
+          <!-- Section label (e.g. "Chorus", "Verse 1") -->
+          <Border IsVisible="{Binding CurrentLineHasSectionLabel}"
+                  Margin="0,0,0,16"
+                  Padding="10,4"
+                  Background="#0f172a"
+                  CornerRadius="4"
+                  HorizontalAlignment="Left">
+            <TextBlock Text="{Binding CurrentLineSectionLabel}"
+                       FontSize="11" FontWeight="SemiBold"
+                       Foreground="#f1f5f9"
+                       LetterSpacing="1" />
+          </Border>
+
+          <!-- Chord diagrams row -->
+          <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled"
+                        Margin="0,0,0,20">
+            <ItemsControl ItemsSource="{Binding CurrentLineChords}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="24" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="services:Chord">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding Name}"
+                               FontSize="18" FontWeight="Bold"
+                               Foreground="White"
+                               HorizontalAlignment="Center" />
+                    <views:ChordDiagramControl
+                        Frets="{Binding Frets}"
+                        IsVisible="{Binding Frets, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Text="?"
+                               FontSize="13" Foreground="#334155"
+                               HorizontalAlignment="Center"
+                               IsVisible="{Binding Frets, Converter={x:Static ObjectConverters.IsNull}}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <!-- Lyric text -->
+          <TextBlock Text="{Binding CurrentLineLyric}"
+                     IsVisible="{Binding CurrentLineHasLyric}"
+                     FontSize="22"
+                     Foreground="#d1d5db"
+                     TextWrapping="Wrap"
+                     LineHeight="32" />
+
+        </StackPanel>
+      </ScrollViewer>
+
+    </DockPanel>
+
+  </DockPanel>
 </UserControl>

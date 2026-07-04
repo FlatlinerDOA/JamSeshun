@@ -1,3 +1,5 @@
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Collections.ObjectModel;
 using System.Reactive.Disposables;
 using CommunityToolkit.Mvvm.Input;

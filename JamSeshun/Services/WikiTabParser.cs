@@ -109,6 +109,161 @@ public static class WikiTabParser
 
     // ── Tab content parsing ──────────────────────────────────────────────────
 
+    /// <summary>
+    /// Parses the tab content into an ordered list of <see cref="PerformanceLine"/> records,
+    /// each pairing a chord line with the lyric line immediately below it and the section
+    /// heading that introduced this passage.
+    ///
+    /// <para>Chord-definition sections ("Chords:") and tablature lines are excluded.</para>
+    /// </summary>
+    public static IReadOnlyList<PerformanceLine> ParsePerformanceLines(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return [];
+        }
+
+        var defs = ParseChordDefinitions(text);
+        var lines = ParseLines(text);
+        var result = new List<PerformanceLine>();
+        var currentSection = string.Empty;
+        var lastEmittedSection = string.Empty;
+        bool inChordSection = false;
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
+
+            // Skip the Chords: definition block
+            if (line.Kind == TabLineKind.Section &&
+                line.Text.Trim().Equals("Chords:", StringComparison.OrdinalIgnoreCase))
+            {
+                inChordSection = true;
+                continue;
+            }
+
+            if (inChordSection)
+            {
+                if (line.Kind == TabLineKind.Blank ||
+                    (line.Text.TrimStart().StartsWith('[') && line.Text.TrimEnd().EndsWith(']')))
+                {
+                    inChordSection = false;
+                }
+
+                continue;
+            }
+
+            if (line.Kind == TabLineKind.Section)
+            {
+                currentSection = line.Text.TrimEnd(':').Trim();
+                continue;
+            }
+
+            if (line.Kind != TabLineKind.Chord)
+            {
+                continue;
+            }
+
+            // Collect chords from this line
+            var chords = new List<Chord>();
+            foreach (var token in line.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (ChordRegex.IsMatch(token))
+                {
+                    var frets = defs.GetValueOrDefault(token) ?? ChordLibrary.Lookup(token);
+                    chords.Add(new Chord(token, frets));
+                }
+            }
+
+            if (chords.Count == 0)
+            {
+                continue;
+            }
+
+            // Look ahead for the lyric line immediately following
+            var lyric = string.Empty;
+            for (int j = i + 1; j < lines.Count; j++)
+            {
+                if (lines[j].Kind == TabLineKind.Blank)
+                {
+                    continue;
+                }
+
+                if (lines[j].Kind == TabLineKind.Lyric)
+                {
+                    lyric = lines[j].Text.Trim();
+                }
+
+                break;
+            }
+
+            // Emit section label only on the first chord line of each new section
+            var sectionLabel = currentSection != lastEmittedSection ? currentSection : string.Empty;
+            lastEmittedSection = currentSection;
+
+            result.Add(new PerformanceLine(sectionLabel, chords, lyric));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Returns chords in the order they appear in the tab content, with duplicates preserved.
+    /// This is the sequence used by Performance Mode to step through the song.
+    /// Reuses the chord-line detection already used for syntax highlighting in the tab view.
+    /// </summary>
+    public static IReadOnlyList<Chord> ParseChordSequence(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return [];
+        }
+
+        var defs = ParseChordDefinitions(text);
+        var sequence = new List<Chord>();
+
+        // Skip the same definition section that ParseChords skips so that
+        // standalone chord names from the legend ("Am", "G", etc.) are not
+        // prepended to the playable sequence.
+        bool inChordSection = false;
+
+        foreach (var line in ParseLines(text))
+        {
+            if (line.Text.Trim().Equals("Chords:", StringComparison.OrdinalIgnoreCase))
+            {
+                inChordSection = true;
+                continue;
+            }
+
+            if (inChordSection)
+            {
+                if (string.IsNullOrWhiteSpace(line.Text) ||
+                    (line.Text.TrimStart().StartsWith('[') && line.Text.TrimEnd().EndsWith(']')))
+                {
+                    inChordSection = false;
+                }
+
+                continue;
+            }
+
+            if (line.Kind != TabLineKind.Chord)
+            {
+                continue;
+            }
+
+            foreach (var token in line.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (ChordRegex.IsMatch(token))
+                {
+                    var frets = defs.GetValueOrDefault(token) ?? ChordLibrary.Lookup(token);
+                    sequence.Add(new Chord(token, frets));
+                }
+            }
+        }
+
+        return sequence;
+    }
+
     public static IReadOnlyList<Chord> ParseChords(string? text)
     {
         if (string.IsNullOrEmpty(text))

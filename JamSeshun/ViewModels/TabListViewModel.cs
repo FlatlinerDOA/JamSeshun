@@ -8,6 +8,8 @@ using JamSeshun.Services;
 
 namespace JamSeshun.ViewModels;
 
+using System.Reactive.Linq;
+
 public partial class TabListViewModel : ViewModelBase, IOnShow, IDisposable
 {
     private static readonly FilePickerFileType TabFileTypes = new("Tab files")
@@ -64,6 +66,7 @@ public partial class TabListViewModel : ViewModelBase, IOnShow, IDisposable
         {
             return Disposable.Empty;
         }
+
         return this.library.Changed
             .SelectMany(_ => Observable.FromAsync(async ct =>
                 await Task.Run(() => this.library.GetAll().OrderBy(e => SongPart(e.Name)).ToList(), ct)))

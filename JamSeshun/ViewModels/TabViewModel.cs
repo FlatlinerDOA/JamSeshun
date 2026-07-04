@@ -5,6 +5,8 @@ using JamSeshun.Services.Tuning;
 
 namespace JamSeshun.ViewModels;
 
+using System.Reactive.Linq;
+
 public class TabViewModel : ViewModelBase, IOnShow
 {
     private readonly TabLibraryService? library;
@@ -13,12 +15,14 @@ public class TabViewModel : ViewModelBase, IOnShow
     public AsyncRelayCommand BackCommand { get; }
     public AsyncRelayCommand EditCommand { get; }
     public AsyncRelayCommand TuneCommand { get; }
+    public AsyncRelayCommand PerformCommand { get; }
 
     public TabViewModel()
     {
-        this.BackCommand = new AsyncRelayCommand(this.OnBack);
-        this.EditCommand = new AsyncRelayCommand(this.OnEdit);
-        this.TuneCommand = new AsyncRelayCommand(this.OnTune);
+        this.BackCommand    = new AsyncRelayCommand(this.OnBack);
+        this.EditCommand    = new AsyncRelayCommand(this.OnEdit);
+        this.TuneCommand    = new AsyncRelayCommand(this.OnTune);
+        this.PerformCommand = new AsyncRelayCommand(this.OnPerform, () => this.HasChordSequence);
     }
 
     public TabViewModel(TabLibraryService library, INavigationService navigation) : this()
@@ -62,6 +66,8 @@ public class TabViewModel : ViewModelBase, IOnShow
             this.OnPropertyChanged(nameof(TabViewModel.HasTuningDisplayOnly));
             this.OnPropertyChanged(nameof(TabViewModel.Chords));
             this.OnPropertyChanged(nameof(TabViewModel.HasChords));
+            this.OnPropertyChanged(nameof(TabViewModel.HasChordSequence));
+            this.PerformCommand.NotifyCanExecuteChanged();
             this.OnPropertyChanged(nameof(TabViewModel.Lines));
         }
     }
@@ -96,6 +102,7 @@ public class TabViewModel : ViewModelBase, IOnShow
 
     public IReadOnlyList<Chord> Chords => WikiTabParser.ParseChords(this.tab?.Content);
     public bool HasChords => this.Chords.Count > 0;
+    public bool HasChordSequence => WikiTabParser.ParsePerformanceLines(this.tab?.Content).Count > 0;
     public IReadOnlyList<TabLine> Lines => WikiTabParser.ParseLines(this.tab?.Content);
 
     public void ReloadTab()
@@ -129,6 +136,17 @@ public class TabViewModel : ViewModelBase, IOnShow
         var id = this.Id.Value;
         var tab = this.tab;
         await this.navigation.PushAsync<TabEditorViewModel>(vm => vm.LoadForEdit(id, tab));
+    }
+
+    private async Task OnPerform()
+    {
+        if (this.navigation == null || this.tab == null)
+        {
+            return;
+        }
+
+        var tab = this.tab;
+        await this.navigation.PushAsync<PerformanceViewModel>(vm => vm.LoadForTab(tab));
     }
 
     private async Task OnTune()

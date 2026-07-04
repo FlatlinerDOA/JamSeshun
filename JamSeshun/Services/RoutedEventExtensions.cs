@@ -1,3 +1,5 @@
+using System.Reactive;
+using System.Reactive.Linq;
 using Avalonia.Interactivity;
 using System.Reactive.Disposables;
 

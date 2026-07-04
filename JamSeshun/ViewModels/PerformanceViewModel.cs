@@ -138,31 +138,25 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
     public int Position => this.HasLines ? this.currentIndex + 1 : 0;
     public string ProgressText => this.HasLines ? $"{this.Position} / {this.TotalLines}" : string.Empty;
 
-    // Current line — exposed as flat properties so compiled XAML bindings
-    // never need to null-traverse through a nullable record.
-    public PerformanceLine? CurrentLine =>
-        this.HasLines ? this.performanceLines[this.currentIndex] : null;
+    public PerformanceLineViewModel PreviousLine { get; private set; } = new(null);
 
-    public IReadOnlyList<Chord> CurrentLineChords =>
-        this.CurrentLine?.Chords ?? [];
+    /// <summary>
+    /// Gets the Current line — exposed as flat properties so compiled XAML bindings
+    /// never need to null-traverse through a nullable record.
+    /// </summary>
+    public PerformanceLineViewModel CurrentLine { get; private set; } = new(null);
 
-    public string CurrentLineLyric =>
-        this.CurrentLine?.LyricText ?? string.Empty;
-
-    public bool CurrentLineHasLyric =>
-        !string.IsNullOrEmpty(this.CurrentLine?.LyricText);
-
-    public string CurrentLineSectionLabel =>
-        this.CurrentLine?.SectionLabel ?? string.Empty;
-
-    public bool CurrentLineHasSectionLabel =>
-        !string.IsNullOrEmpty(this.CurrentLine?.SectionLabel);
+    /// <summary>
+    /// Gets the next line after the one that's been detected (current)
+    /// </summary>
+    public PerformanceLineViewModel? NextLine { get; private set; } = new(null);
 
     // Next three lines shown in the preview strip
     public IReadOnlyList<PerformanceLine> UpcomingLines =>
-        this.performanceLines.Skip(this.currentIndex + 1).Take(3).ToList();
+        this.performanceLines.Skip(this.currentIndex + 3).Take(2).ToList();
 
     public bool CanGoNext => this.currentIndex < this.performanceLines.Count - 1;
+
     public bool CanGoPrevious => this.currentIndex > 0;
 
     // ── Audio tracking ───────────────────────────────────────────────────────
@@ -331,12 +325,13 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
 
     private void NotifyNavigationChanged()
     {
+        this.PreviousLine = this.HasLines ? new(this.performanceLines[this.currentIndex]) : new(null);
+        this.CurrentLine = this.HasLines && this.currentIndex + 1 < this.performanceLines.Count ? new(this.performanceLines[this.currentIndex + 1]) : new(null);
+        this.NextLine = this.HasLines && this.currentIndex + 2 < this.performanceLines.Count ? new(this.performanceLines[this.currentIndex + 2]) : new(null);
+
+        this.OnPropertyChanged(nameof(PerformanceViewModel.PreviousLine));
         this.OnPropertyChanged(nameof(PerformanceViewModel.CurrentLine));
-        this.OnPropertyChanged(nameof(PerformanceViewModel.CurrentLineChords));
-        this.OnPropertyChanged(nameof(PerformanceViewModel.CurrentLineLyric));
-        this.OnPropertyChanged(nameof(PerformanceViewModel.CurrentLineHasLyric));
-        this.OnPropertyChanged(nameof(PerformanceViewModel.CurrentLineSectionLabel));
-        this.OnPropertyChanged(nameof(PerformanceViewModel.CurrentLineHasSectionLabel));
+        this.OnPropertyChanged(nameof(PerformanceViewModel.NextLine));
         this.OnPropertyChanged(nameof(PerformanceViewModel.UpcomingLines));
         this.OnPropertyChanged(nameof(PerformanceViewModel.Position));
         this.OnPropertyChanged(nameof(PerformanceViewModel.ProgressText));

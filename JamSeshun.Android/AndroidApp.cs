@@ -6,6 +6,7 @@ using Avalonia.Android;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using global::Android.App;
+using global::Android.Content;
 using global::Android.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Optris.Icons.Avalonia;
@@ -26,6 +27,7 @@ public class AndroidApp : AvaloniaAndroidApplication<App>
         return base.CustomizeAppBuilder(builder)
             .ConfigureServices(services =>
             {
+                services.AddSingleton<Context>(this.ApplicationContext);
                 services.AddSingleton<IAudioCaptureService, AndroidAudioCaptureService>();
                 services.AddSingleton<ITuningService, AndroidTuningService>();
                 services.AddSingleton<IChordTrackerService, ChordTrackerService>();

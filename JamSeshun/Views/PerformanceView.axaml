@@ -44,7 +44,64 @@
       <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
   </UserControl.Styles>
+  <UserControl.Resources>
+    <DataTemplate x:Key="ActiveLineTemplate" DataType="vm:PerformanceLineViewModel">
+      <StackPanel Spacing="0" Margin="16,20,16,16">
 
+          <!-- Section label (e.g. "Chorus", "Verse 1") -->
+          <Border IsVisible="{Binding HasSectionLabel}"
+                  Margin="0,0,0,16"
+                  Padding="10,4"
+                  Background="#0f172a"
+                  CornerRadius="4"
+                  HorizontalAlignment="Left">
+            <TextBlock Text="{Binding SectionLabel}"
+                       FontSize="11" FontWeight="SemiBold"
+                       Foreground="#f1f5f9"
+                       LetterSpacing="1" />
+          </Border>
+
+          <!-- Chord diagrams row -->
+          <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled"
+                        Margin="0,0,0,20">
+            <ItemsControl ItemsSource="{Binding Chords}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="24" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="services:Chord">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding Name}"
+                               FontSize="18" FontWeight="Bold"
+                               Foreground="White"
+                               HorizontalAlignment="Center" />
+                    <views:ChordDiagramControl
+                        Frets="{Binding Frets}"
+                        IsVisible="{Binding Frets, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Text="?"
+                               FontSize="13" Foreground="#334155"
+                               HorizontalAlignment="Center"
+                               IsVisible="{Binding Frets, Converter={x:Static ObjectConverters.IsNull}}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <!-- Lyric text -->
+          <TextBlock Text="{Binding Lyric}"
+                     IsVisible="{Binding HasLyric}"
+                     FontSize="22"
+                     Foreground="#d1d5db"
+                     TextWrapping="Wrap"
+                     LineHeight="32" />
+
+        </StackPanel>
+    </DataTemplate>
+  </UserControl.Resources>
   <DockPanel>
 
     <!-- ── Header ─────────────────────────────────────────── -->
@@ -222,62 +279,18 @@
       <!-- Current line: section label + chord diagrams + lyric -->
       <ScrollViewer VerticalScrollBarVisibility="Auto"
                     HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="0" Margin="16,20,16,16">
 
-          <!-- Section label (e.g. "Chorus", "Verse 1") -->
-          <Border IsVisible="{Binding CurrentLineHasSectionLabel}"
-                  Margin="0,0,0,16"
-                  Padding="10,4"
-                  Background="#0f172a"
-                  CornerRadius="4"
-                  HorizontalAlignment="Left">
-            <TextBlock Text="{Binding CurrentLineSectionLabel}"
-                       FontSize="11" FontWeight="SemiBold"
-                       Foreground="#f1f5f9"
-                       LetterSpacing="1" />
-          </Border>
+        <StackPanel>
+          <!-- Explicitly pointing to the template by its Key -->
+          <ContentControl Content="{Binding PreviousLine}"
+                          ContentTemplate="{StaticResource ActiveLineTemplate}" Opacity=".8" />
 
-          <!-- Chord diagrams row -->
-          <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                        VerticalScrollBarVisibility="Disabled"
-                        Margin="0,0,0,20">
-            <ItemsControl ItemsSource="{Binding CurrentLineChords}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <StackPanel Orientation="Horizontal" Spacing="24" />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="services:Chord">
-                  <StackPanel Spacing="8" HorizontalAlignment="Center">
-                    <TextBlock Text="{Binding Name}"
-                               FontSize="18" FontWeight="Bold"
-                               Foreground="White"
-                               HorizontalAlignment="Center" />
-                    <views:ChordDiagramControl
-                        Frets="{Binding Frets}"
-                        IsVisible="{Binding Frets, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <TextBlock Text="?"
-                               FontSize="13" Foreground="#334155"
-                               HorizontalAlignment="Center"
-                               IsVisible="{Binding Frets, Converter={x:Static ObjectConverters.IsNull}}" />
-                  </StackPanel>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
-
-          <!-- Lyric text -->
-          <TextBlock Text="{Binding CurrentLineLyric}"
-                     IsVisible="{Binding CurrentLineHasLyric}"
-                     FontSize="22"
-                     Foreground="#d1d5db"
-                     TextWrapping="Wrap"
-                     LineHeight="32" />
-
+          <ContentControl Content="{Binding CurrentLine}"
+                          ContentTemplate="{StaticResource ActiveLineTemplate}" />
+          <ContentControl Content="{Binding NextLine}"
+                          ContentTemplate="{StaticResource ActiveLineTemplate}"  Opacity=".8" />
         </StackPanel>
       </ScrollViewer>
-
     </DockPanel>
 
   </DockPanel>

@@ -6,36 +6,42 @@ namespace JamSeshun.Services.Tuning;
 /// recognition window, advancing only forward.
 ///
 /// <para>
-/// Intended implementation: Whisper tiny (default bundle) or Qwen-Audio (optional
-/// download for sung vocals), both quantised to INT8 ONNX and executed via
-/// <c>Microsoft.ML.OnnxRuntime</c> with explicit execution-provider configuration
-/// (CoreML on iOS, NNAPI on Android, DirectML on Windows — each requires its own
-/// NuGet package and <c>AppendExecutionProvider_*</c> call; not automatic).
-/// Audio is resampled from the capture rate (44.1 kHz) to 16 kHz before inference.
-/// A Silero VAD gate discards silent frames before the ASR window runs.
+/// The default implementation (<see cref="AsrLyricTrackerService"/>) owns the audio
+/// pipeline — capture, 44.1 kHz → 16 kHz resampling, energy VAD gate, 5-second rolling
+/// window with 1-second stride — and delegates recognition to an
+/// <see cref="ISpeechTranscriber"/> (Whisper tiny ONNX being the intended engine; see
+/// <c>docs/PerformanceAudioTracking.md</c> for model selection and platform notes).
+/// Matching against lyric lines is done by <see cref="LyricMatcher"/> (token overlap
+/// with hysteresis).
 /// </para>
 ///
 /// <para>
-/// See <c>docs/PerformanceAudioTracking.md</c> for the full design, model selection
-/// rationale, lyric-matching algorithm, latency estimates (all unverified —
-/// must be measured per device), and platform notes.
+/// <paramref name="position"/> (see <see cref="TrackLyrics"/>) carries the caller's
+/// current line index, including manual Prev/Next navigation, so matching always
+/// starts from the line actually on screen.  Lines with empty lyric text
+/// (instrument-only passages) are skipped by the matcher; the chord tracker handles
+/// progression through those.
 /// </para>
 ///
 /// <para>
 /// Registered as an optional singleton.  <see cref="JamSeshun.ViewModels.PerformanceViewModel"/>
-/// accepts a nullable instance; when absent the lyric-tracking toggle is hidden.
-/// Disposing the service tears down the ONNX session; disposing the returned
-/// subscription stops an individual tracking run without affecting other callers.
+/// accepts a nullable instance; when absent the lyric-tracking path is simply not
+/// subscribed.  Disposing the service tears down the recognition engine; disposing the
+/// returned subscription stops an individual tracking run without affecting other callers.
 /// </para>
 /// </summary>
 public interface ILyricTrackerService : IDisposable
 {
     /// <summary>
-    /// Starts recognising audio from <paramref name="device"/> and emits the 0-based
-    /// index of the lyric line within <paramref name="lines"/> that best matches the
-    /// current audio window.  Only ever advances — never emits an index less than or
-    /// equal to the last emitted value.  Does not complete on its own; dispose the
-    /// subscription to stop tracking.
+    /// Starts recognising audio from <paramref name="device"/> and emits a
+    /// <see cref="LyricTrackingUpdate"/> whose index is the 0-based lyric line within
+    /// <paramref name="lines"/> to advance to.  <paramref name="position"/> is the
+    /// caller's current line index (emitting the initial value immediately, then on
+    /// every navigation).  Emitted indices are always greater than the latest observed
+    /// position.  Does not complete on its own; dispose the subscription to stop tracking.
     /// </summary>
-    IObservable<LyricTrackingUpdate> TrackLyrics(AudioCaptureDevice device, IReadOnlyList<string> lines);
+    IObservable<LyricTrackingUpdate> TrackLyrics(
+        AudioCaptureDevice device,
+        IReadOnlyList<string> lines,
+        IObservable<int> position);
 }

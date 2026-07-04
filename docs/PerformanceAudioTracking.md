@@ -1,5 +1,22 @@
 # Performance Mode — Audio-Based Line Progression
 
+## Implementation Status
+
+| Piece | Status |
+|---|---|
+| Raw capture abstraction (`IAudioCaptureService`, shared per device via `Publish().RefCount()`) | ✅ implemented (`SoundFlowAudioCaptureService` on Desktop) |
+| 44.1 kHz → 16 kHz anti-aliased resampling (`AudioResampler`, streaming polyphase) | ✅ implemented + tested |
+| Chord detection (`ChordTrackerService`: chroma + template matching against the song's chord vocabulary) | ✅ implemented + tested (DSP engine; DistilHuBERT ONNX remains a drop-in upgrade) |
+| Lyric matching (`LyricMatcher`: token overlap, hysteresis, empty-line skip) | ✅ implemented + tested |
+| Lyric tracking pipeline (`AsrLyricTrackerService`: VAD gate, 5 s window / 1 s stride, single-flight transcription) | ✅ implemented + tested behind `ISpeechTranscriber` seam |
+| ASR engine (`ISpeechTranscriber` implementation — Whisper tiny ONNX, download-on-demand) | ⬜ not yet implemented; lyric tracker unregistered until it lands |
+| `PerformanceViewModel` wiring (toggle, device discovery, position feedback, confidence indicator) | ✅ implemented + tested |
+
+**Interface change since the original draft:** both trackers now take an
+`IObservable<int> position` parameter carrying the caller's current line index
+(including manual Prev/Next), so the trackers never go stale when the user navigates
+manually.  Emitted indices are always greater than the latest observed position.
+
 ## Overview
 
 Two complementary strategies can auto-advance the performance view as the user plays
@@ -18,14 +35,25 @@ indicator at low confidence — the same pattern as the tuner's `DisplayOpacity`
 
 > **Key constraint:** The existing tuner pipeline captures at **44.1 kHz**.
 > All ASR and chord-detection models below expect **16 kHz** input.
-> An explicit **anti-aliased resampling stage** (44.1 k → 16 k) is required before any
-> model inference and is not yet implemented.
+> The **anti-aliased resampling stage** (44.1 k → 16 k) is implemented as
+> `AudioResampler` (streaming polyphase, windowed-sinc, ~-74 dB stopband) and used by
+> both trackers.
 
 ---
 
 ## Strategy A — Chord Detection
 
-### Model
+> **Implemented engine:** `ChordTrackerService` ships with a pure-DSP detector —
+> a 12-bin chromagram (`ChromaExtractor`, 512 ms window / 128 ms hop at 16 kHz) matched
+> against templates built from the song's own chord fingerings
+> (`ChordTemplateMatcher`, cosine similarity + softmax confidence).  Restricting the
+> vocabulary to the tab's chords is what makes this reliable, and per-hop cost is a
+> single 8192-point FFT — no model download, no cold start, latency bounded by the
+> analysis window rather than inference.  The DistilHuBERT model below remains the
+> planned upgrade path behind the same `IChordTrackerService` interface for
+> vocabulary-free detection.
+
+### Model (future upgrade)
 
 **`alejogil35/distilhubert-finetuned-chorddetection`** (HuggingFace)
 [https://huggingface.co/alejogil35/distilhubert-finetuned-chorddetection](https://huggingface.co/alejogil35/distilhubert-finetuned-chorddetection)
@@ -86,24 +114,33 @@ compares detected labels against the **next** line's chord list with enharmonic
 normalisation (e.g. `C#` ↔ `Db`):
 
 ```
-next_line_chords = performanceLines[currentIndex + 1].Chords.Select(c => c.Name)
-normalised_detected = normalise(detectedChord)
+next_chords    = pitch_class_sets(lines[currentIndex + 1].Chords)
+current_chords = pitch_class_sets(lines[currentIndex].Chords)
+detected       = pitch_class_set(detectedChord)
 
-if normalised_detected ∈ normalise(next_line_chords) AND confidence ≥ 0.6:
+if detected ∈ next_chords AND detected ∉ current_chords AND confidence ≥ 0.6:
     hold_count++
     if hold_count ≥ 2: advance()
 else:
     hold_count = 0
 ```
 
+Comparison is by **pitch-class set** (which subsumes enharmonic normalisation — Db and
+C# produce the same set).  The `detected ∉ current_chords` guard is essential: when
+consecutive lines share a chord vocabulary (e.g. Wonderwall, where every line contains
+Em7), a shared chord is no evidence of progression and must not advance.  For such
+songs the lyric tracker carries the progression; chord tracking stays high-precision.
+
 ### Service Interface
 
 ```csharp
 // Returns ChordTrackingUpdate (lineIndex + detectedChord + confidence)
 // so the UI can dim the tracking indicator at low confidence.
+// `position` is the caller's current line index (manual navigation included).
 IObservable<ChordTrackingUpdate> TrackChords(
     AudioCaptureDevice device,
-    IReadOnlyList<PerformanceLine> lines);
+    IReadOnlyList<PerformanceLine> lines,
+    IObservable<int> position);
 ```
 
 ---
@@ -173,44 +210,32 @@ the chord tracker handles progression through those lines.
 ```csharp
 // Returns LyricTrackingUpdate (lineIndex + confidence), advance-only.
 // Never completes on its own — dispose the subscription to stop tracking.
+// `position` is the caller's current line index (manual navigation included).
 IObservable<LyricTrackingUpdate> TrackLyrics(
     AudioCaptureDevice device,
-    IReadOnlyList<string> lyricLines);
+    IReadOnlyList<string> lyricLines,
+    IObservable<int> position);
 ```
 
 ---
 
 ## Combined PerformanceViewModel Integration
 
-`PerformanceViewModel` accepts both trackers as nullable optional dependencies.
-`OnShow()` subscribes to whichever are non-null and enabled via `CompositeDisposable`:
+`PerformanceViewModel` accepts both trackers (plus `IAudioCaptureService` for device
+discovery) as nullable optional dependencies.  Tracking is **toggle-driven, not
+show-driven**: `OnShow()` installs a `SerialDisposable` slot and discovers the default
+capture device; flipping `AudioTrackingEnabled` (or loading a new tab) swaps the live
+tracker subscriptions into the slot via `UpdateTracking()`.  Hiding the view disposes
+the slot, which tears everything down.
+
+The VM owns a `BehaviorSubject<int> position` that it pushes on every navigation
+(manual or tracker-driven) and hands to both trackers, closing the feedback loop:
 
 ```csharp
-public IDisposable OnShow()
-{
-    var subscriptions = new CompositeDisposable();
-
-    if (this.chordTracker != null && this.audioTrackingEnabled && this.trackingDevice != null)
-    {
-        subscriptions.Add(
-            this.chordTracker
-                .TrackChords(this.trackingDevice, this.performanceLines)
-                .ObserveOn(AvaloniaScheduler.Instance)
-                .Subscribe(u => this.AdvanceTo(u.LineIndex)));
-    }
-
-    if (this.lyricTracker != null && this.audioTrackingEnabled && this.trackingDevice != null)
-    {
-        var lyrics = this.performanceLines.Select(l => l.LyricText).ToList();
-        subscriptions.Add(
-            this.lyricTracker
-                .TrackLyrics(this.trackingDevice, lyrics)
-                .ObserveOn(AvaloniaScheduler.Instance)
-                .Subscribe(u => this.AdvanceTo(u.LineIndex)));
-    }
-
-    return subscriptions;
-}
+subscriptions.Add(this.chordTracker
+    .TrackChords(device, lines, this.position)
+    .ObserveOn(AvaloniaScheduler.Instance)
+    .Subscribe(this.OnChordTrackingUpdate));   // updates indicator state + AdvanceTo
 ```
 
 > **Index space:** both trackers emit indices into the `PerformanceLine` list.
@@ -295,20 +320,31 @@ threads; they must `ObserveOn(AvaloniaScheduler.Instance)` before emitting to th
 
 ## Open Questions / Future Work
 
-- **Resampling implementation:** choose a resampling library (e.g. `NWaves`, or a simple
-  polyphase filter in managed code) and decide whether it lives in the shared project or
-  per-platform tuning service.
-- **Shared capture source:** if the tuner and a tracker run simultaneously (e.g. user
-  tunes then performs), both need mic access.  Some platforms use exclusive-mode capture.
-  Consider a shared `AudioCaptureSession` that fans out to multiple consumers rather than
-  opening the device twice.
-- **Enharmonic normalisation:** define a canonical mapping shared between `ChordLibrary`,
-  the chord tracker, and the tab parser (e.g. always prefer sharps; `Db` → `C#`).
+- ~~**Resampling implementation**~~ — done: `AudioResampler` (managed polyphase) in the
+  shared project.
+- ~~**Shared capture source**~~ — done for trackers: `IAudioCaptureService.Capture` is
+  shared per device via `Publish().RefCount()`.  Done for Desktop: `SoundFlowTuningService`
+  (which opened its own `MiniAudioEngine`) is gone; `CaptureTuningService` now layers
+  pitch detection on top of `SoundFlowAudioCaptureService`, so tuner + trackers share one
+  device open.  Remaining: Android's `AndroidTuningService` and iOS's `ITuningService`
+  still open capture inline instead of implementing `IAudioCaptureService` — see the
+  "Android/iOS capture" item below.
+- ~~**Enharmonic normalisation**~~ — done: `ChordNotes.Normalize` (prefer sharps) plus
+  pitch-class-set comparison in the tracker.
+- ~~**Testing**~~ — done: fakes + synthesised-audio specs cover resampler, chord
+  detection, both trackers, and the VM wiring.
+- **Whisper engine:** implement `ISpeechTranscriber` (Whisper tiny ONNX or Whisper.net,
+  download-on-demand with progress UI) and register `AsrLyricTrackerService` in the
+  platform entry points.  This is the only piece missing for lyric tracking.
+- **Android/iOS capture:** implement `IAudioCaptureService` in `AndroidTuningService`'s
+  project (and iOS) so chord tracking works on mobile; the tracker itself is shared code.
+- **DistilHuBERT upgrade:** export/quantise the model, benchmark per-device latency, and
+  swap it in behind `IChordTrackerService` for vocabulary-free chord detection.
 - **Qwen-Audio-0.6B viability:** revisit when a quantised ONNX checkpoint is available
   and mobile latency can be measured; currently not a shippable option.
-- **Battery/thermal:** continuous transformer inference every 1 s will drain battery and
-  may trigger thermal throttling on sustained use.  Consider a duty cycle (inference
-  every 2–3 s) or pausing inference when signal level is below a threshold.
-- **Testing:** add a fake `IChordTrackerService` and `ILyricTrackerService` (emitting
-  scripted `TrackingUpdate` sequences) to the test project so `PerformanceViewModel`
-  auto-advance logic can be exercised without real models.
+- **Battery/thermal (ASR):** continuous transformer inference every 1 s will drain
+  battery on mobile.  The energy VAD gate and single-flight drop policy already reduce
+  duty cycle; consider widening the stride further on battery power.
+- **Chroma robustness on real audio:** the DSP detector is validated on synthesised
+  chords; tune `MinSimilarity` / confidence temperature against real strummed-guitar
+  recordings (mic bleed, body resonance, out-of-tune strings).

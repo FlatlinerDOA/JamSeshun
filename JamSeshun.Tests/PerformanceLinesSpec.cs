@@ -177,10 +177,10 @@ public class PerformanceLinesSpec
     }
 
     [Fact]
-    public void BracketSectionHeaders_ProduceNoSectionLabel()
+    public void BracketSectionHeaders_ProduceSectionLabel()
     {
-        // [VERSE 1] format (no colon) is classified as Lyric, not Section —
-        // so currentSection is never updated and no label is emitted.
+        // [VERSE 1] format (no colon) is classified as Section — the bracket contents
+        // become the section label, same as the colon-style "Verse 1:" header.
         const string content =
             "[VERSE 1]\n" +
             "\n" +
@@ -190,7 +190,7 @@ public class PerformanceLinesSpec
         var lines = Parse(content);
 
         Assert.Single(lines);
-        Assert.Empty(lines[0].SectionLabel);
+        Assert.Equal("VERSE 1", lines[0].SectionLabel);
     }
 
     // ── Chords: definition block exclusion ───────────────────────────────────
@@ -263,7 +263,7 @@ public class PerformanceLinesSpec
         var lines = Parse(content);
 
         var am = lines[0].Chords.First(c => c.Name == "Am");
-        var g  = lines[0].Chords.First(c => c.Name == "G");
+        var g = lines[0].Chords.First(c => c.Name == "G");
 
         Assert.NotNull(am.Frets);
         Assert.NotNull(g.Frets);
@@ -347,10 +347,13 @@ public class PerformanceLinesSpec
     }
 
     [Fact]
-    public void PleaseForgiveMeVerse1_BracketHeader_ProducesNoSectionLabel()
+    public void PleaseForgiveMeVerse1_BracketHeader_ProducesSectionLabelOnFirstLineOnly()
     {
+        // [VERSE 1] now produces a section label, emitted only on the first performance
+        // line of that section — subsequent lines in the same section are empty.
         var lines = Parse(PleaseForgiveMeVerse1Excerpt);
-        Assert.All(lines, l => Assert.Empty(l.SectionLabel));
+        Assert.Equal("VERSE 1", lines[0].SectionLabel);
+        Assert.All(lines.Skip(1), l => Assert.Empty(l.SectionLabel));
     }
 
     [Fact]
@@ -572,5 +575,268 @@ public class PerformanceLinesSpec
                 Assert.DoesNotMatch(@"^[eEbBgGdDaA]\|", l.LyricText);
             }
         });
+    }
+
+    // ── Gap 1: bracket section headers ───────────────────────────────────────
+
+    [Fact]
+    public void Gap1_BracketHeader_ProducesSectionLabel()
+    {
+        const string content =
+            "[Intro]\n" +
+            "G  D  Em  C\n" +
+            "Some lyrics\n";
+
+        var lines = Parse(content);
+
+        Assert.Single(lines);
+        Assert.Equal("Intro", lines[0].SectionLabel);
+    }
+
+    [Fact]
+    public void Gap1_BracketHeaderWithRepeatMarker_ProducesSectionLabel()
+    {
+        const string content =
+            "[Chorus] x2\n" +
+            "G  D\n" +
+            "Words here\n";
+
+        var lines = Parse(content);
+
+        Assert.Single(lines);
+        Assert.Equal("Chorus", lines[0].SectionLabel);
+    }
+
+    [Fact]
+    public void Gap1_BracketHeader_DoesNotSwallowInlineChordLyric()
+    {
+        // A lyric line that merely contains bracketed chords inline must not be
+        // mistaken for a bracket section header — only a WHOLE line of "[Label]" is.
+        const string content =
+            "[Verse 1]\n" +
+            "[D]Make me a boat and [Dmaj7]away I'll float\n";
+
+        var lines = WikiTabParser.ParseLines(content);
+
+        Assert.Equal(TabLineKind.Section, lines[0].Kind);
+        Assert.NotEqual(TabLineKind.Section, lines[1].Kind);
+    }
+
+    // ── Gap 2: lyric look-ahead stops at section headers ─────────────────────
+
+    [Fact]
+    public void Gap2_LyricLookAhead_StopsAtBracketSectionHeader()
+    {
+        // A chord line immediately followed by a new bracket section header (no lyric
+        // in between) must have an empty LyricText — the header must never be captured
+        // as the "lyric".
+        const string content =
+            "[Verse 1]\n" +
+            "G  D  Em  C\n" +
+            "[Verse 2]\n" +
+            "Am  F\n" +
+            "Actual lyric\n";
+
+        var lines = Parse(content);
+
+        Assert.Equal(2, lines.Count);
+        Assert.Empty(lines[0].LyricText);
+        Assert.Equal("Verse 2", lines[1].SectionLabel);
+        Assert.Equal("Actual lyric", lines[1].LyricText);
+    }
+
+    // ── Gap 3: bar-line chord rows ────────────────────────────────────────────
+    // Verbatim excerpt from Phil Collins - Cant Find My Way V1.Chords.txt, lines 1–3.
+
+    private const string CantFindMyWayIntroExcerpt =
+        "[Intro]\n" +
+        "|N.C |N.C |N.C |\n" +
+        "|Em |Em |D5 |Em | 2x\n";
+
+    [Fact]
+    public void Gap3_BarLineChordRow_ClassifiedAsChord()
+    {
+        var lines = WikiTabParser.ParseLines(CantFindMyWayIntroExcerpt);
+
+        Assert.Equal(TabLineKind.Section, lines[0].Kind);
+        Assert.Equal(TabLineKind.Chord, lines[1].Kind); // "|N.C |N.C |N.C |"
+        Assert.Equal(TabLineKind.Chord, lines[2].Kind); // "|Em |Em |D5 |Em | 2x"
+    }
+
+    [Fact]
+    public void Gap3_BarLineChordRow_YieldsChordsInOrder_WithDuplicatesPreserved()
+    {
+        var lines = Parse(CantFindMyWayIntroExcerpt);
+
+        Assert.Single(lines);
+        Assert.Equal(["Em", "Em", "D5", "Em"], ChordNames(lines[0]));
+    }
+
+    [Fact]
+    public void Gap3_NoChordBarRow_ProducesNoChords_ButIsNotLyric()
+    {
+        const string content = "|N.C |N.C |N.C |\n";
+
+        var lines = WikiTabParser.ParseLines(content);
+
+        Assert.NotEqual(TabLineKind.Lyric, lines[0].Kind);
+    }
+
+    [Fact]
+    public void Gap3_TabStringRow_StillClassifiedAsTabString_NotBarChord()
+    {
+        // "e|---0---" (letter then '|') must remain TabString, not a bar-chord row.
+        const string content =
+            "e|---0---2---|\n" +
+            "E|-3--2--2---2--0--2--0-|\n";
+
+        var lines = WikiTabParser.ParseLines(content);
+
+        Assert.Equal(TabLineKind.TabString, lines[0].Kind);
+        Assert.Equal(TabLineKind.TabString, lines[1].Kind);
+    }
+
+    [Fact]
+    public void Gap3_BarLineWithMultipleChordsPerBar_AllExtracted()
+    {
+        // "|F C F|Bb|F C F|Bb|" (David Gray-style, no spaces around '|').
+        const string content = "[Intro]\n|F C F|Bb|F C F|Bb|\n";
+
+        var lines = Parse(content);
+
+        Assert.Single(lines);
+        Assert.Equal(["F", "C", "F", "Bb", "F", "C", "F", "Bb"], ChordNames(lines[0]));
+    }
+
+    // ── Gap 4: repeat markers ─────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("Am F C G x2")]
+    [InlineData("Am F C G 2x")]
+    [InlineData("Am F C G X2")]
+    [InlineData("Am F C G (x2)")]
+    public void Gap4_TrailingRepeatMarker_StillClassifiedAsChordLine_MarkerExcluded(string content)
+    {
+        var lines = Parse(content + "\n");
+
+        Assert.Single(lines);
+        Assert.Equal(["Am", "F", "C", "G"], ChordNames(lines[0]));
+    }
+
+    [Fact]
+    public void Gap4_RepeatMarker_OnSectionHeader_StrippedFromLabel()
+    {
+        const string content =
+            "[Chorus] (x2)\n" +
+            "Am  G\n" +
+            "Words\n";
+
+        var lines = Parse(content);
+
+        Assert.Single(lines);
+        Assert.Equal("Chorus", lines[0].SectionLabel);
+    }
+
+    // ── Gap 5: diagram legend row below a Chords Used: tablature block ───────
+    // Verbatim excerpt from David Gray - Knowhere V1.Chords.txt, lines 13–26.
+
+    private const string KnowhereChordsUsedExcerpt =
+        "Chords Used:\n" +
+        "\n" +
+        "E|-3--2--2---2--0--2--0-|\n" +
+        "B|-0--3--3---2--2--4--0-|\n" +
+        "G|-0--2--4---2--2--4--1-|\n" +
+        "D|-0--0--4---4--2--4--2-|\n" +
+        "A|-2-----2---4--0--2--2-|\n" +
+        "E|-3---------2--------0-|\n" +
+        "   G  D  Bm Gbm A  B  E\n" +
+        "\n" +
+        "-:Verse 1:-\n" +
+        "\n" +
+        "G           D                  Bm       Gbm\n" +
+        "Slow voices speaking through a hurricane\n";
+
+    [Fact]
+    public void Gap5_LegendRowBelowTabStrings_IsSkipped()
+    {
+        var lines = Parse(KnowhereChordsUsedExcerpt);
+
+        // Only the Verse 1 performance line should be present — not the legend row
+        // ("   G  D  Bm Gbm A  B  E") which sits directly below the tab-string rows.
+        Assert.Single(lines);
+        Assert.Equal(["G", "D", "Bm", "Gbm"], ChordNames(lines[0]));
+        Assert.Equal("Slow voices speaking through a hurricane", lines[0].LyricText);
+    }
+
+    [Fact]
+    public void Gap5_ChordsUsedHeader_RecognisedLikeChordsHeader()
+    {
+        const string content =
+            "Chords Used:\n" +
+            "Am   x02210\n" +
+            "\n" +
+            "Verse 1:\n" +
+            "Am  G\n" +
+            "Some lyrics\n";
+
+        var lines = Parse(content);
+
+        Assert.Single(lines);
+        Assert.Equal(["Am", "G"], ChordNames(lines[0]));
+    }
+
+    // ── Gap 6: decorated headers ──────────────────────────────────────────────
+
+    [Fact]
+    public void Gap6_ColonDashDecoratedHeader_ProducesSectionLabel()
+    {
+        // "-:Verse 1:-" from David Gray - Knowhere V1.Chords.txt.
+        const string content =
+            "-:Verse 1:-\n" +
+            "G  D\n" +
+            "Some words\n";
+
+        var lines = Parse(content);
+
+        Assert.Single(lines);
+        Assert.Equal("Verse 1", lines[0].SectionLabel);
+    }
+
+    [Fact]
+    public void Gap6_DashSurroundedTitle_ProducesSectionLabel()
+    {
+        // "-----SPACE ODDITY-----" from the Bowie mashup file.
+        const string content =
+            "-----SPACE ODDITY-----\n" +
+            "Eb  G\n" +
+            "This is Major Tom to ground control\n";
+
+        var lines = Parse(content);
+
+        Assert.Single(lines);
+        Assert.Equal("SPACE ODDITY", lines[0].SectionLabel);
+    }
+
+    [Fact]
+    public void Gap6_PureDashLine_IsBlank_NotSectionOrChord()
+    {
+        const string content =
+            "-----------------------------------------------------------------\n" +
+            "\n" +
+            "Some ordinary paragraph text.\n";
+
+        var lines = WikiTabParser.ParseLines(content);
+
+        Assert.Equal(TabLineKind.Blank, lines[0].Kind);
+    }
+
+    [Fact]
+    public void Gap6_PureDashLine_DoesNotBecomeChordLine()
+    {
+        const string content = "----------------------------------------\n";
+
+        var lines = WikiTabParser.ParseLines(content);
+
+        Assert.NotEqual(TabLineKind.Chord, lines[0].Kind);
     }
 }

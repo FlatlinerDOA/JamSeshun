@@ -43,6 +43,36 @@ public static class WikiTabParser
         @"^(?<string>[eEbBgGdDaA])\s*[-:|]?\s*(?<fret>[xX]|\d+)$",
         RegexOptions.Compiled);
 
+    // Repeat markers: "x2", "2x", "X2", "(x2)" — a whole token, never a chord.
+    internal static readonly Regex RepeatMarkerRegex = new(
+        @"^\(?(?:[0-9]{1,2}[xX]|[xX][0-9]{1,2})\)?$",
+        RegexOptions.Compiled);
+
+    // "No chord" annotation: N.C, N.C., NC.
+    internal static readonly Regex NoChordRegex = new(
+        @"^N\.?C\.?$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    // A bracketed section header on its own line: "[Intro]", "[Verse 1]", optionally
+    // followed by a trailing repeat marker: "[Chorus] x2".
+    internal static readonly Regex BracketSectionRegex = new(
+        @"^\s*\[(?<label>[^\[\]]+)\]\s*(?:\(?(?:[0-9]{1,2}[xX]|[xX][0-9]{1,2})\)?\s*)?$",
+        RegexOptions.Compiled);
+
+    // A decorated header where dashes/colons surround real text, e.g. "-----SPACE ODDITY-----"
+    // or "-:Verse 1:-". Must start and end with a dash (optionally via colon combinations)
+    // and contain at least one non-dash/colon/space character in between; pure-dash lines
+    // are handled separately (see DashOnlyLineRegex). The label is recovered by trimming
+    // leading/trailing dash/colon/space characters (see ExtractSectionLabel).
+    internal static readonly Regex DecoratedHeaderRegex = new(
+        @"^\s*-[-:]*[^-:\s](?:.*[^-:\s])?[-:]*-\s*$",
+        RegexOptions.Compiled);
+
+    // A line consisting solely of dashes/colons/whitespace — pure decoration, no label.
+    internal static readonly Regex DashOnlyLineRegex = new(
+        @"^[\s\-:]+$",
+        RegexOptions.Compiled);
+
     // ── File / filename parsing ──────────────────────────────────────────────
 
     /// <summary>Parses a WikiTab .txt file into a SavedTab. Returns null if the filename doesn't match.</summary>
@@ -61,7 +91,7 @@ public static class WikiTabParser
         if (m.Success)
         {
             artist = m.Groups["artist"].Value.Trim();
-            song   = m.Groups["song"].Value.Trim();
+            song = m.Groups["song"].Value.Trim();
         }
         else
         {
@@ -79,7 +109,7 @@ public static class WikiTabParser
             }
 
             artist = stem[..dash].Trim();
-            song   = stem[(dash + 3)..].Trim();
+            song = stem[(dash + 3)..].Trim();
             if (string.IsNullOrEmpty(song))
             {
                 return null;
@@ -134,9 +164,8 @@ public static class WikiTabParser
         {
             var line = lines[i];
 
-            // Skip the Chords: definition block
-            if (line.Kind == TabLineKind.Section &&
-                line.Text.Trim().Equals("Chords:", StringComparison.OrdinalIgnoreCase))
+            // Skip the Chords:/Chords Used: definition block
+            if (line.Kind == TabLineKind.Section && IsChordsBlockHeader(line.Text))
             {
                 inChordSection = true;
                 continue;
@@ -155,7 +184,7 @@ public static class WikiTabParser
 
             if (line.Kind == TabLineKind.Section)
             {
-                currentSection = line.Text.TrimEnd(':').Trim();
+                currentSection = ExtractSectionLabel(line.Text);
                 continue;
             }
 
@@ -164,10 +193,26 @@ public static class WikiTabParser
                 continue;
             }
 
+            // A chord-kind line directly below a tablature row is a diagram legend
+            // (e.g. "   G  D  Bm Gbm A  B  E" below six "E|-3--2--..." rows), not a
+            // performance chord line — skip it.
+            if (i > 0 && lines[i - 1].Kind == TabLineKind.TabString)
+            {
+                continue;
+            }
+
             // Collect chords from this line
             var chords = new List<Chord>();
-            foreach (var token in line.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            var chordTokens = line.Text.TrimStart().StartsWith('|')
+                ? TokenizeBarLine(line.Text)
+                : line.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var token in chordTokens)
             {
+                if (IsNeutralAnnotationToken(token))
+                {
+                    continue;
+                }
+
                 if (ChordRegex.IsMatch(token))
                 {
                     var frets = defs.GetValueOrDefault(token) ?? ChordLibrary.Lookup(token);
@@ -226,12 +271,14 @@ public static class WikiTabParser
         // standalone chord names from the legend ("Am", "G", etc.) are not
         // prepended to the playable sequence.
         bool inChordSection = false;
+        var previousKind = TabLineKind.Blank;
 
         foreach (var line in ParseLines(text))
         {
-            if (line.Text.Trim().Equals("Chords:", StringComparison.OrdinalIgnoreCase))
+            if (IsChordsBlockHeader(line.Text))
             {
                 inChordSection = true;
+                previousKind = line.Kind;
                 continue;
             }
 
@@ -243,22 +290,40 @@ public static class WikiTabParser
                     inChordSection = false;
                 }
 
+                previousKind = line.Kind;
                 continue;
             }
 
             if (line.Kind != TabLineKind.Chord)
             {
+                previousKind = line.Kind;
                 continue;
             }
 
-            foreach (var token in line.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            // A chord-kind line directly below a tablature row is a diagram legend, not
+            // part of the playable sequence — skip it.
+            if (previousKind == TabLineKind.TabString)
             {
+                previousKind = line.Kind;
+                continue;
+            }
+
+            var tokens = line.Text.TrimStart().StartsWith('|') ? TokenizeBarLine(line.Text) : line.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var token in tokens)
+            {
+                if (IsNeutralAnnotationToken(token))
+                {
+                    continue;
+                }
+
                 if (ChordRegex.IsMatch(token))
                 {
                     var frets = defs.GetValueOrDefault(token) ?? ChordLibrary.Lookup(token);
                     sequence.Add(new Chord(token, frets));
                 }
             }
+
+            previousKind = line.Kind;
         }
 
         return sequence;
@@ -271,8 +336,8 @@ public static class WikiTabParser
             return [];
         }
 
-        var defs   = ParseChordDefinitions(text);
-        var seen   = new HashSet<string>(StringComparer.Ordinal);
+        var defs = ParseChordDefinitions(text);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         var chords = new List<Chord>();
 
         foreach (var (name, frets) in defs)
@@ -308,7 +373,7 @@ public static class WikiTabParser
                 continue;
             }
 
-            var tokens     = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var tokens = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var chordNames = tokens.Where(t => ChordRegex.IsMatch(t)).ToList();
 
             if (tokens.Length > 0 && chordNames.Count > 0 && (double)chordNames.Count / tokens.Length >= 0.5)
@@ -329,8 +394,8 @@ public static class WikiTabParser
     public static Dictionary<string, int[]> ParseChordDefinitions(string text)
     {
         var result = new Dictionary<string, int[]>(StringComparer.Ordinal);
-        var lines  = text.Split('\n');
-        int limit  = Math.Min(lines.Length, 80);
+        var lines = text.Split('\n');
+        int limit = Math.Min(lines.Length, 80);
 
         for (int i = 0; i < limit; i++)
         {
@@ -342,7 +407,7 @@ public static class WikiTabParser
             }
 
             var line = lines[i].TrimEnd('\r').Trim();
-            var m    = ChordDefRegex.Match(line);
+            var m = ChordDefRegex.Match(line);
             if (!m.Success)
             {
                 continue;
@@ -364,7 +429,7 @@ public static class WikiTabParser
     /// </summary>
     public static bool TryParseVerticalDiagram(string[] lines, int index, out string name, out int[] frets)
     {
-        name  = string.Empty;
+        name = string.Empty;
         frets = [];
 
         var header = lines[index].TrimEnd('\r').Trim();
@@ -374,7 +439,7 @@ public static class WikiTabParser
         }
 
         var letters = new char[6];
-        var values  = new int[6];
+        var values = new int[6];
         for (int r = 0; r < 6; r++)
         {
             var m = DiagramRowRegex.Match(lines[index + 1 + r].TrimEnd('\r').Trim());
@@ -407,7 +472,7 @@ public static class WikiTabParser
             result[order[r]] = values[r];
         }
 
-        name  = header;
+        name = header;
         frets = result;
         return true;
     }
@@ -470,14 +535,32 @@ public static class WikiTabParser
         foreach (var raw in text.Split('\n'))
         {
             var line = raw.TrimEnd('\r');
+            var trimmedStart = line.TrimStart();
             TabLineKind kind;
             if (string.IsNullOrWhiteSpace(line))
             {
                 kind = TabLineKind.Blank;
             }
+            else if (DashOnlyLineRegex.IsMatch(line))
+            {
+                // Pure dash/colon decoration with no text — treat as blank spacing.
+                kind = TabLineKind.Blank;
+            }
             else if (line.Length > 1 && line[1] == '|')
             {
                 kind = TabLineKind.TabString;
+            }
+            else if (trimmedStart.Length > 1 && IsTabStringLetter(trimmedStart[0]) && trimmedStart[1] == '|')
+            {
+                kind = TabLineKind.TabString;
+            }
+            else if (BracketSectionRegex.IsMatch(line))
+            {
+                kind = TabLineKind.Section;
+            }
+            else if (DecoratedHeaderRegex.IsMatch(line))
+            {
+                kind = TabLineKind.Section;
             }
             else if (line.TrimEnd().EndsWith(':') && line.Length < 25 && !line.Contains('|'))
             {
@@ -487,11 +570,23 @@ public static class WikiTabParser
             {
                 kind = TabLineKind.Lyric;
             }
+            else if (trimmedStart.StartsWith('|'))
+            {
+                // Bar-line chord row, e.g. "|Em |Em |D5 |Em |" — split on '|' too.
+                // A bar row made solely of neutral annotations (e.g. "|N.C |N.C |N.C |")
+                // has no chords to classify against but is still an annotation row, not lyric prose.
+                var tokens = TokenizeBarLine(line);
+                var chordCount = tokens.Count(t => ChordRegex.IsMatch(t));
+                var realTokens = tokens.Count(t => !IsNeutralAnnotationToken(t));
+                kind = realTokens == 0 || (chordCount > 0 && (double)chordCount / realTokens >= 0.5)
+                    ? TabLineKind.Chord : TabLineKind.Lyric;
+            }
             else
             {
-                var tokens     = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var tokens = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 var chordCount = tokens.Count(t => ChordRegex.IsMatch(t));
-                kind = tokens.Length > 0 && chordCount > 0 && (double)chordCount / tokens.Length >= 0.5
+                var realTokens = tokens.Count(t => !IsNeutralAnnotationToken(t));
+                kind = realTokens > 0 && chordCount > 0 && (double)chordCount / realTokens >= 0.5
                     ? TabLineKind.Chord : TabLineKind.Lyric;
             }
             lines.Add(new TabLine(kind, line));
@@ -499,13 +594,54 @@ public static class WikiTabParser
         return lines;
     }
 
+    /// <summary>True for a single letter that names a guitar string (e, b, g, d, a, E).</summary>
+    private static bool IsTabStringLetter(char c) =>
+        c is 'e' or 'E' or 'b' or 'B' or 'g' or 'G' or 'd' or 'D' or 'a' or 'A';
+
+    /// <summary>True for tokens that are neither chords nor lyric words: repeat markers and "no chord" annotations.</summary>
+    internal static bool IsNeutralAnnotationToken(string token) =>
+        RepeatMarkerRegex.IsMatch(token) || NoChordRegex.IsMatch(token);
+
+    /// <summary>Splits a bar-line chord row on both '|' and whitespace, dropping empty entries.</summary>
+    internal static string[] TokenizeBarLine(string line) =>
+        line.Split(['|', ' '], StringSplitOptions.RemoveEmptyEntries);
+
+    /// <summary>True for a "Chords:" / "Chords Used:" definition-block header line.</summary>
+    internal static bool IsChordsBlockHeader(string text)
+    {
+        var trimmed = text.Trim();
+        return trimmed.Equals("Chords:", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Equals("Chords Used:", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Extracts the human-readable label from a Section-kind line, regardless of whether
+    /// it used colon ("Verse 1:"), bracket ("[Verse 1]" / "[Chorus] x2"), or dash/colon
+    /// decoration ("-----SPACE ODDITY-----", "-:Verse 1:-") styling.
+    /// </summary>
+    internal static string ExtractSectionLabel(string text)
+    {
+        var bracketMatch = BracketSectionRegex.Match(text);
+        if (bracketMatch.Success)
+        {
+            return bracketMatch.Groups["label"].Value.Trim();
+        }
+
+        if (DecoratedHeaderRegex.IsMatch(text))
+        {
+            return text.Trim().Trim('-', ':', ' ');
+        }
+
+        return text.TrimEnd(':').Trim();
+    }
+
     // ── Private helpers ──────────────────────────────────────────────────────
 
     private static (string Tuning, int Capo) ParseMetadata(string content)
     {
-        var tuning         = string.Empty;
+        var tuning = string.Empty;
         var tuningPriority = int.MaxValue;
-        var capo           = 0;
+        var capo = 0;
 
         foreach (var raw in content.Split('\n').Take(25))
         {
@@ -536,11 +672,11 @@ public static class WikiTabParser
             var tuningMatch = TuningRegex.Match(line);
             if (tuningMatch.Success)
             {
-                var prefix   = tuningMatch.Groups["prefix"].Value.Trim();
+                var prefix = tuningMatch.Groups["prefix"].Value.Trim();
                 var priority = TuningPriority(prefix);
                 if (priority < tuningPriority)
                 {
-                    tuning         = tuningMatch.Groups["tuning"].Value.Trim();
+                    tuning = tuningMatch.Groups["tuning"].Value.Trim();
                     tuningPriority = priority;
                 }
             }
@@ -551,24 +687,24 @@ public static class WikiTabParser
 
     private static int TuningPriority(string prefix) => prefix.ToLowerInvariant() switch
     {
-        "studio"   => 0,
+        "studio" => 0,
         "standard" => 1,
-        ""         => 1,
-        "live"     => 2,
-        _          => 1,
+        "" => 1,
+        "live" => 2,
+        _ => 1,
     };
 
     private static int ParseOrdinal(string word) => word.ToLowerInvariant() switch
     {
-        "1st" or "first"   => 1,
-        "2nd" or "second"  => 2,
-        "3rd" or "third"   => 3,
-        "4th" or "fourth"  => 4,
-        "5th" or "fifth"   => 5,
-        "6th" or "sixth"   => 6,
+        "1st" or "first" => 1,
+        "2nd" or "second" => 2,
+        "3rd" or "third" => 3,
+        "4th" or "fourth" => 4,
+        "5th" or "fifth" => 5,
+        "6th" or "sixth" => 6,
         "7th" or "seventh" => 7,
-        "8th" or "eighth"  => 8,
-        "9th" or "ninth"   => 9,
+        "8th" or "eighth" => 8,
+        "9th" or "ninth" => 9,
         _ => 0
     };
 }

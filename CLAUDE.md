@@ -32,9 +32,9 @@ dotnet build JamSeshun.Android
 | Project | Purpose                                                                                          |
 |---|--------------------------------------------------------------------------------------------------|
 | `JamSeshun/` | Shared UI library — views, view models, services (cross-platform)                                |
-| `JamSeshun.Desktop/` | Desktop entry point; registers `SoundFlowTuningService` (SoundFlow Cross Platform Audio library) |
-| `JamSeshun.Android/` | Android entry point; registers `AndroidTuningService` (Native Android Audio)                     |
-| `JamSeshun.iOS/` | iOS entry point (stub)                                                                           |
+| `JamSeshun.Desktop/` | Desktop entry point; registers `SoundFlowAudioCaptureService` (raw capture, SoundFlow Cross Platform Audio library) — pitch detection is shared code (`CaptureTuningService`) layered on top |
+| `JamSeshun.Android/` | Android entry point; registers `AndroidTuningService` (Native Android Audio) directly — transitional, not yet rebased onto `IAudioCaptureService` |
+| `JamSeshun.iOS/` | iOS entry point (stub); registers its `ITuningService` directly — transitional, same as Android                                                |
 | `JamSeshun.Tests/` | xUnit tests using `Avalonia.Headless.XUnit`                                                      |
 
 ## Architecture
@@ -42,12 +42,12 @@ dotnet build JamSeshun.Android
 **MVVM with DI.** `Microsoft.Extensions.DependencyInjection` wires views, view models, and services. The composition root is in `ServiceRegistry.cs`:
 - `WithCommonServices()` — shared services (e.g. `GuitarTabsService`)
 - `WithViewsAndViewModels()` — registers all VMs and keyed view controls
-- Each platform entry point calls `AppBuilder.ConfigureServices(...)` to add its platform-specific `ITuningService` implementation
+- Each platform entry point calls `AppBuilder.ConfigureServices(...)` to add its platform-specific `IAudioCaptureService` implementation (raw microphone capture — see `IAudioCaptureService.cs`). Desktop then registers the shared `CaptureTuningService` for `ITuningService`; Android/iOS still register their own legacy `ITuningService` implementations directly (transitional — see `docs/PerformanceAudioTracking.md`)
 
 **ViewLocator** (`Services/ViewLocator.cs`) resolves views from view models by name convention (`*ViewModel` → `*View`), first via the keyed DI container, then by reflection. Register new view/VM pairs in `ServiceRegistry.WithViewsAndViewModels()`.
 
 **Pitch detection pipeline:**
-1. `ITuningService` (platform-specific) provides `IObservable<DetectedPitch>` from the microphone
+1. `ITuningService` provides `IObservable<DetectedPitch>` from the microphone. On Desktop this is `CaptureTuningService`, shared code that layers pitch detection on top of the platform's `IAudioCaptureService` raw capture stream; Android/iOS still open their own capture inline (transitional)
 2. `AutoCorrelationPitchDetector` finds the fundamental frequency via time-domain autocorrelation (robust at guitar's low frequencies where FFT bin width exceeds a semitone; locks onto the fundamental period even when harmonics dominate). `FftAlgorithm` remains for spectrogram rendering only
 3. `TunerViewModel` subscribes, buffers over 300ms windows, and exposes `CurrentNote`, `CurrentFrequency`, `CurrentErrorInCents`
 4. `TunerView` / `TunerNeedle` render the result

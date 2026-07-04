@@ -5,6 +5,7 @@
              xmlns:vm="using:JamSeshun.ViewModels"
              xmlns:services="using:JamSeshun.Services"
              xmlns:views="using:JamSeshun.Views"
+             xmlns:tuning="using:JamSeshun.Services.Tuning"
              xmlns:i="https://github.com/projektanker/icons.avalonia"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="700"
              x:DataType="vm:PerformanceViewModel"
@@ -33,6 +34,14 @@
     </Style>
     <Style Selector="Button.nav-btn:disabled /template/ ContentPresenter">
       <Setter Property="Opacity" Value="0.3" />
+    </Style>
+    <Style Selector="ComboBox.device-picker">
+      <Setter Property="Background" Value="#1e293b" />
+      <Setter Property="Foreground" Value="#e2e8f0" />
+      <Setter Property="BorderBrush" Value="#334155" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
   </UserControl.Styles>
 
@@ -64,10 +73,74 @@
                      Margin="0,2,0,0" />
         </StackPanel>
 
-        <TextBlock Grid.Column="2"
-                   Text="{Binding ProgressText}"
-                   FontSize="13" Foreground="#64748b"
-                   VerticalAlignment="Center" />
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    Spacing="10"
+                    VerticalAlignment="Center">
+
+          <!-- Audio tracking status: last detected chord, dimmed at low confidence -->
+          <TextBlock Text="{Binding TrackingStatusText}"
+                     Opacity="{Binding TrackingIndicatorOpacity}"
+                     IsVisible="{Binding AudioTrackingEnabled}"
+                     FontSize="12" Foreground="#4ade80"
+                     VerticalAlignment="Center" />
+
+          <!-- Auto-advance toggle; hidden when no tracker service is registered -->
+          <ToggleButton IsChecked="{Binding AudioTrackingEnabled}"
+                        IsVisible="{Binding CanAudioTrack}"
+                        Background="#1e293b"
+                        BorderBrush="#334155"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="9,7"
+                        ToolTip.Tip="Auto-advance from the microphone as you play">
+            <i:Icon Value="fa-solid fa-microphone" FontSize="14" Foreground="#7fc0f4" />
+          </ToggleButton>
+
+          <TextBlock Text="{Binding ProgressText}"
+                     FontSize="13" Foreground="#64748b"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ── Device row: separate guitar/voice capture devices ─ -->
+    <Border DockPanel.Dock="Top"
+            Background="#0f172a"
+            Padding="12,0,12,10"
+            IsVisible="{Binding AudioTrackingEnabled}">
+      <Grid IsVisible="{Binding CanAudioTrack}"
+            ColumnDefinitions="*,*"
+            ColumnSpacing="10">
+        <StackPanel Grid.Column="0">
+          <TextBlock Text="GUITAR"
+                     FontSize="9" FontWeight="SemiBold"
+                     Foreground="#64748b" Margin="2,0,0,2" />
+          <ComboBox Classes="device-picker"
+                    ItemsSource="{Binding Devices}"
+                    SelectedItem="{Binding GuitarDevice}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="tuning:AudioCaptureDevice">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1">
+          <TextBlock Text="VOICE"
+                     FontSize="9" FontWeight="SemiBold"
+                     Foreground="#64748b" Margin="2,0,0,2" />
+          <ComboBox Classes="device-picker"
+                    ItemsSource="{Binding Devices}"
+                    SelectedItem="{Binding VoiceDevice}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="tuning:AudioCaptureDevice">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
       </Grid>
     </Border>
 

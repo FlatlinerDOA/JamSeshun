@@ -1,4 +1,4 @@
-﻿namespace JamSeshun.Desktop;
+namespace JamSeshun.Services.Tuning;
 
 using System;
 
@@ -55,7 +55,7 @@ public sealed class BipBuffer<T> where T : unmanaged
         get
         {
             if (this.bInUse)
-                /* distance between region B and region A */
+            /* distance between region B and region A */
             {
                 return this.aStart - this.bEnd;
             }

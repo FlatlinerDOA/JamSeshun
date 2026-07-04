@@ -1,5 +1,12 @@
 # Performance Mode — Lyric Tracking via On-Device ASR
 
+> **Superseded:** this was the original exploration document.  The consolidated design
+> and current implementation status live in
+> [PerformanceAudioTracking.md](PerformanceAudioTracking.md); interfaces have since
+> gained an `IObservable<int> position` parameter and the pipeline
+> (`AsrLyricTrackerService` + `LyricMatcher`) is implemented behind an
+> `ISpeechTranscriber` seam awaiting a Whisper engine.
+
 ## Goal
 
 Auto-advance the performance view to the next chord+lyric line as the user sings or

@@ -1,6 +1,8 @@
 using System.Reactive;
 using System.Reactive.Linq;
+using System.Collections.ObjectModel;
 using System.Reactive.Disposables;
+using System.Reactive.Subjects;
 using CommunityToolkit.Mvvm.Input;
 using JamSeshun.Services;
 using JamSeshun.Services.Tuning;
@@ -12,66 +14,89 @@ namespace JamSeshun.ViewModels;
 /// (chord line + lyric + section label) parsed from a saved tab.
 ///
 /// Audio-based auto-advance is provided by <see cref="IChordTrackerService"/> and
-/// <see cref="ILyricTrackerService"/> (both optional; hidden when null).
-/// See <c>docs/PerformanceAudioTracking.md</c> for the full design.
+/// <see cref="ILyricTrackerService"/> (both optional; the toggle is hidden when
+/// neither is registered).  The trackers observe <see cref="position"/> so manual
+/// Prev/Next keeps them in sync, and their advance-only updates flow back through
+/// <see cref="AdvanceTo"/>.  See <c>docs/PerformanceAudioTracking.md</c>.
 /// </summary>
 public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
 {
     private readonly INavigationService? navigation;
     private readonly IChordTrackerService? chordTracker;
     private readonly ILyricTrackerService? lyricTracker;
+    private readonly IAudioCaptureService? captureService;
+    private readonly BehaviorSubject<int> position = new(0);
     private IReadOnlyList<PerformanceLine> performanceLines = [];
     private int currentIndex;
     private string song = string.Empty;
     private string artist = string.Empty;
     private string tuningDisplay = string.Empty;
-    private AudioCaptureDevice? trackingDevice = null; // populated when tracking device selection is wired
+    private AudioCaptureDevice? guitarDevice;
+    private AudioCaptureDevice? voiceDevice;
     private bool audioTrackingEnabled;
+    private string lastDetectedChord = string.Empty;
+    private float trackingConfidence;
+
+    // Non-null only while the view is shown; holds the live tracker subscriptions.
+    private SerialDisposable? trackingSlot;
 
     public PerformanceViewModel()
     {
-        this.BackCommand     = new AsyncRelayCommand(this.OnBack);
-        this.NextCommand     = new RelayCommand(this.GoNext, () => this.CanGoNext);
+        this.BackCommand = new AsyncRelayCommand(this.OnBack);
+        this.NextCommand = new RelayCommand(this.GoNext, () => this.CanGoNext);
         this.PreviousCommand = new RelayCommand(this.GoPrevious, () => this.CanGoPrevious);
     }
 
     public PerformanceViewModel(
         INavigationService navigation,
         IChordTrackerService? chordTracker = null,
-        ILyricTrackerService? lyricTracker = null) : this()
+        ILyricTrackerService? lyricTracker = null,
+        IAudioCaptureService? captureService = null) : this()
     {
         this.navigation = navigation;
         this.chordTracker = chordTracker;
         this.lyricTracker = lyricTracker;
+        this.captureService = captureService;
     }
 
     // ── IOnShow ──────────────────────────────────────────────────────────────
 
     public IDisposable OnShow()
     {
-        var subscriptions = new CompositeDisposable();
+        var trackingSubscription = new SerialDisposable();
+        this.trackingSlot = trackingSubscription;
 
-        if (this.chordTracker != null && this.audioTrackingEnabled && this.trackingDevice != null)
-        {
-            subscriptions.Add(
-                this.chordTracker
-                    .TrackChords(this.trackingDevice, this.performanceLines)
-                    .ObserveOn(AvaloniaScheduler.Instance)
-                    .Subscribe(u => this.AdvanceTo(u.LineIndex)));
-        }
+        var subscriptions = new CompositeDisposable(
+            trackingSubscription,
+            Disposable.Create(() => this.trackingSlot = null));
 
-        if (this.lyricTracker != null && this.audioTrackingEnabled && this.trackingDevice != null)
+        if (this.captureService != null && this.CanAudioTrack)
         {
-            var lyrics = this.performanceLines.Select(l => l.LyricText).ToList();
-            subscriptions.Add(
-                this.lyricTracker
-                    .TrackLyrics(this.trackingDevice, lyrics)
-                    .ObserveOn(AvaloniaScheduler.Instance)
-                    .Subscribe(u => this.AdvanceTo(u.LineIndex)));
+            subscriptions.Add(this.captureService
+                .GetAudioCaptureDevices()
+                .ObserveOn(AvaloniaScheduler.Instance)
+                .Subscribe(devices =>
+                {
+                    this.Devices.Clear();
+                    foreach (var d in devices)
+                    {
+                        this.Devices.Add(d);
+                    }
+
+                    var defaultDevice = devices.FirstOrDefault(d => d.IsDefault) ?? devices.FirstOrDefault();
+                    this.guitarDevice ??= defaultDevice;
+                    this.voiceDevice ??= defaultDevice;
+                    this.OnPropertyChanged(nameof(PerformanceViewModel.GuitarDevice));
+                    this.OnPropertyChanged(nameof(PerformanceViewModel.VoiceDevice));
+                    this.UpdateTracking();
+                }));
         }
 
         return subscriptions;
     }
+
+    /// <summary>Capture devices discovered on show; source for the Guitar/Voice pickers.</summary>
+    public ObservableCollection<AudioCaptureDevice> Devices { get; } = new();
 
     // ── Data loading ─────────────────────────────────────────────────────────
 
@@ -95,7 +120,11 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
         this.tuningDisplay = string.Join("  ·  ", parts);
         this.performanceLines = WikiTabParser.ParsePerformanceLines(tab.Content);
         this.currentIndex = 0;
+        this.position.OnNext(0);
         this.NotifyAll();
+
+        // Trackers hold the line list from when they started — restart on new content.
+        this.UpdateTracking();
     }
 
     // ── Song metadata ────────────────────────────────────────────────────────
@@ -136,7 +165,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
     public IReadOnlyList<PerformanceLine> UpcomingLines =>
         this.performanceLines.Skip(this.currentIndex + 1).Take(3).ToList();
 
-    public bool CanGoNext     => this.currentIndex < this.performanceLines.Count - 1;
+    public bool CanGoNext => this.currentIndex < this.performanceLines.Count - 1;
     public bool CanGoPrevious => this.currentIndex > 0;
 
     // ── Audio tracking ───────────────────────────────────────────────────────
@@ -146,8 +175,61 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
     public bool AudioTrackingEnabled
     {
         get => this.audioTrackingEnabled;
-        set => this.SetProperty(ref this.audioTrackingEnabled, value);
+        set
+        {
+            if (this.SetProperty(ref this.audioTrackingEnabled, value))
+            {
+                this.UpdateTracking();
+                this.OnPropertyChanged(nameof(PerformanceViewModel.TrackingStatusText));
+                this.OnPropertyChanged(nameof(PerformanceViewModel.IsTracking));
+            }
+        }
     }
+
+    /// <summary>Capture device used by the chord tracker. Changing it while tracking restarts.</summary>
+    public AudioCaptureDevice? GuitarDevice
+    {
+        get => this.guitarDevice;
+        set
+        {
+            if (this.SetProperty(ref this.guitarDevice, value))
+            {
+                this.UpdateTracking();
+            }
+        }
+    }
+
+    /// <summary>Capture device used by the lyric tracker. Changing it while tracking restarts.</summary>
+    public AudioCaptureDevice? VoiceDevice
+    {
+        get => this.voiceDevice;
+        set
+        {
+            if (this.SetProperty(ref this.voiceDevice, value))
+            {
+                this.UpdateTracking();
+            }
+        }
+    }
+
+    /// <summary>True while at least one tracker subscription is live (enabled, shown, a device found).</summary>
+    public bool IsTracking =>
+        this.audioTrackingEnabled && this.trackingSlot != null &&
+        (this.guitarDevice != null || this.voiceDevice != null);
+
+    /// <summary>Chord label from the most recent auto-advance, for the tracking indicator.</summary>
+    public string LastDetectedChord => this.lastDetectedChord;
+
+    /// <summary>Confidence of the most recent tracker update (0–1); dims the indicator.</summary>
+    public float TrackingConfidence => this.trackingConfidence;
+
+    /// <summary>Indicator opacity: same fade pattern as the tuner's DisplayOpacity.</summary>
+    public double TrackingIndicatorOpacity => 0.35 + 0.65 * Math.Clamp(this.trackingConfidence, 0f, 1f);
+
+    public string TrackingStatusText =>
+        !this.audioTrackingEnabled ? string.Empty
+        : string.IsNullOrEmpty(this.lastDetectedChord) ? "listening…"
+        : this.lastDetectedChord;
 
     // ── Commands ─────────────────────────────────────────────────────────────
 
@@ -157,11 +239,75 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
 
     // ── Private ──────────────────────────────────────────────────────────────
 
+    /// <summary>(Re)starts or stops tracker subscriptions to match the current state.</summary>
+    private void UpdateTracking()
+    {
+        if (this.trackingSlot == null)
+        {
+            return; // not shown
+        }
+
+        bool hasAnyDevice = this.guitarDevice != null || this.voiceDevice != null;
+        if (!this.audioTrackingEnabled || !hasAnyDevice || !this.HasLines)
+        {
+            this.trackingSlot.Disposable = Disposable.Empty;
+            this.OnPropertyChanged(nameof(PerformanceViewModel.IsTracking));
+            return;
+        }
+
+        var lines = this.performanceLines;
+        var subscriptions = new CompositeDisposable();
+
+        if (this.chordTracker != null && this.guitarDevice != null)
+        {
+            subscriptions.Add(this.chordTracker
+                .TrackChords(this.guitarDevice, lines, this.position)
+                .ObserveOn(AvaloniaScheduler.Instance)
+                .Subscribe(this.OnChordTrackingUpdate));
+        }
+
+        if (this.lyricTracker != null && this.voiceDevice != null)
+        {
+            var lyrics = lines.Select(l => l.LyricText).ToList();
+            subscriptions.Add(this.lyricTracker
+                .TrackLyrics(this.voiceDevice, lyrics, this.position)
+                .ObserveOn(AvaloniaScheduler.Instance)
+                .Subscribe(this.OnLyricTrackingUpdate));
+        }
+
+        this.trackingSlot.Disposable = subscriptions;
+        this.OnPropertyChanged(nameof(PerformanceViewModel.IsTracking));
+    }
+
+    private void OnChordTrackingUpdate(ChordTrackingUpdate update)
+    {
+        this.lastDetectedChord = update.DetectedChord;
+        this.trackingConfidence = update.Confidence;
+        this.NotifyTrackingChanged();
+        this.AdvanceTo(update.LineIndex);
+    }
+
+    private void OnLyricTrackingUpdate(LyricTrackingUpdate update)
+    {
+        this.trackingConfidence = update.Confidence;
+        this.NotifyTrackingChanged();
+        this.AdvanceTo(update.LineIndex);
+    }
+
+    private void NotifyTrackingChanged()
+    {
+        this.OnPropertyChanged(nameof(PerformanceViewModel.LastDetectedChord));
+        this.OnPropertyChanged(nameof(PerformanceViewModel.TrackingConfidence));
+        this.OnPropertyChanged(nameof(PerformanceViewModel.TrackingIndicatorOpacity));
+        this.OnPropertyChanged(nameof(PerformanceViewModel.TrackingStatusText));
+    }
+
     private void AdvanceTo(int lineIndex)
     {
         if (lineIndex > this.currentIndex && lineIndex < this.performanceLines.Count)
         {
             this.currentIndex = lineIndex;
+            this.position.OnNext(lineIndex);
             this.NotifyNavigationChanged();
         }
     }
@@ -171,6 +317,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
         if (this.currentIndex < this.performanceLines.Count - 1)
         {
             this.currentIndex++;
+            this.position.OnNext(this.currentIndex);
             this.NotifyNavigationChanged();
         }
     }
@@ -180,6 +327,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
         if (this.currentIndex > 0)
         {
             this.currentIndex--;
+            this.position.OnNext(this.currentIndex);
             this.NotifyNavigationChanged();
         }
     }
@@ -222,6 +370,8 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
 
     public void Dispose()
     {
-        // Subscriptions from OnShow() are owned by the view via IOnShow contract.
+        // Subscriptions from OnShow() are owned by the view via the IOnShow contract;
+        // the position subject is owned here.
+        this.position.Dispose();
     }
 }

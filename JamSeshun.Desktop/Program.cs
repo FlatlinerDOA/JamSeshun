@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 
 using Avalonia;
@@ -32,8 +32,14 @@ class Program
             {
                 TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
                 AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-                ITuningService tuningService = new SoundFlowTuningService();
-                services.AddSingleton<ITuningService>(tuningService);
+
+                // Raw capture is the only platform-specific piece; pitch detection and
+                // chord tracking are shared code layered on top (CaptureTuningService,
+                // ChordTrackerService). The lyric tracker is registered once an
+                // ISpeechTranscriber engine (Whisper) is added.
+                services.AddSingleton<IAudioCaptureService, SoundFlowAudioCaptureService>();
+                services.AddSingleton<ITuningService, CaptureTuningService>();
+                services.AddSingleton<IChordTrackerService, ChordTrackerService>();
             })
             .UsePlatformDetect()
             .WithInterFont()

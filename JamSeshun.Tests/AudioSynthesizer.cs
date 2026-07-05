@@ -24,8 +24,15 @@ public static class AudioSynthesizer
         return samples;
     }
 
-    /// <summary>Synthesises a strummed chord from its fingering ([E A D G B e], -1 = muted).</summary>
-    public static float[] Chord(int[] frets, double seconds, int sampleRate)
+    /// <summary>
+    /// Synthesises a strummed chord from its fingering ([E A D G B e], -1 = muted).
+    /// </summary>
+    /// <param name="capoSemitones">
+    /// Simulates a capo raising every open string's effective pitch by this many
+    /// semitones (0 = no capo) — fretting a shape above a capo at fret N sounds like
+    /// fretting that same shape N frets higher with no capo.
+    /// </param>
+    public static float[] Chord(int[] frets, double seconds, int sampleRate, int capoSemitones = 0)
     {
         var samples = new float[(int)(seconds * sampleRate)];
         int voices = 0;
@@ -38,7 +45,7 @@ public static class AudioSynthesizer
             }
 
             voices++;
-            double fundamental = 440.0 * Math.Pow(2.0, (AudioSynthesizer.openStringMidi[s] + frets[s] - 69) / 12.0);
+            double fundamental = 440.0 * Math.Pow(2.0, (AudioSynthesizer.openStringMidi[s] + frets[s] + capoSemitones - 69) / 12.0);
             for (int harmonic = 1; harmonic <= 5; harmonic++)
             {
                 double frequency = fundamental * harmonic;
@@ -75,11 +82,16 @@ public static class AudioSynthesizer
     }
 
     /// <summary>Synthesises a named chord using the built-in <see cref="ChordLibrary"/> fingering.</summary>
-    public static float[] Chord(string name, double seconds, int sampleRate) =>
+    /// <param name="capoSemitones">
+    /// Simulates a capo raising every open string's effective pitch by this many
+    /// semitones (0 = no capo) — see the fingering overload for the physical model.
+    /// </param>
+    public static float[] Chord(string name, double seconds, int sampleRate, int capoSemitones = 0) =>
         AudioSynthesizer.Chord(
             ChordLibrary.Lookup(name) ?? throw new ArgumentException($"Unknown chord {name}", nameof(name)),
             seconds,
-            sampleRate);
+            sampleRate,
+            capoSemitones);
 
     /// <summary>Splits samples into capture-sized <see cref="AudioFrame"/>s.</summary>
     public static IEnumerable<AudioFrame> Frames(float[] samples, int sampleRate, int frameSize = 4410)

@@ -33,12 +33,18 @@ public sealed class ChordTemplateMatcher
 
     private readonly List<(string Name, IReadOnlySet<int> PitchClasses, float[] Template)> templates = [];
 
-    public ChordTemplateMatcher(IEnumerable<Chord> vocabulary)
+    /// <param name="vocabulary">Chords named exactly as printed in the tab (the SHAPE fretted).</param>
+    /// <param name="capo">
+    /// The fret the song's capo sits on (0 = none).  Templates are built in capo-transposed
+    /// pitch-class space so they match the actual sounding audio, which the microphone hears
+    /// at concert pitch rather than the shape's open-position pitch.
+    /// </param>
+    public ChordTemplateMatcher(IEnumerable<Chord> vocabulary, int capo = 0)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var chord in vocabulary)
         {
-            var pitchClasses = ChordNotes.GetPitchClasses(chord);
+            var pitchClasses = ChordNotes.GetPitchClasses(chord, capo);
             if (pitchClasses.Count == 0)
             {
                 continue;
@@ -52,7 +58,7 @@ public sealed class ChordTemplateMatcher
                 continue;
             }
 
-            this.templates.Add((chord.Name, pitchClasses, ChordTemplateMatcher.BuildTemplate(chord, pitchClasses)));
+            this.templates.Add((chord.Name, pitchClasses, ChordTemplateMatcher.BuildTemplate(chord, pitchClasses, capo)));
         }
     }
 
@@ -108,7 +114,7 @@ public sealed class ChordTemplateMatcher
         return new ChordMatch(name, pitchClasses, (float)bestSimilarity, (float)(1.0 / denominator));
     }
 
-    private static float[] BuildTemplate(Chord chord, IReadOnlySet<int> pitchClasses)
+    private static float[] BuildTemplate(Chord chord, IReadOnlySet<int> pitchClasses, int capo = 0)
     {
         var template = new float[12];
         foreach (var pc in pitchClasses)
@@ -116,10 +122,14 @@ public sealed class ChordTemplateMatcher
             template[pc] = 1f;
         }
 
+        // pitchClasses (and thus the template bins) are already capo-shifted, so the
+        // root looked up here must be shifted by the same amount or it will land on
+        // the wrong (or an empty) bin.
         var root = ChordNotes.ParseRootPitchClass(chord.Name);
-        if (root != null && template[root.Value] > 0)
+        var shiftedRoot = root != null ? ((root.Value + capo) % 12 + 12) % 12 : (int?)null;
+        if (shiftedRoot != null && template[shiftedRoot.Value] > 0)
         {
-            template[root.Value] = RootEmphasis;
+            template[shiftedRoot.Value] = RootEmphasis;
         }
 
         double norm = 0;

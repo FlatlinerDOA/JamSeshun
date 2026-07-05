@@ -17,12 +17,19 @@ public static class ChordNotes
         ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
     /// <summary>
-    /// Returns the set of pitch classes (0 = C … 11 = B) sounded by <paramref name="chord"/>.
-    /// Uses the fingering when available (exact voicing), otherwise derives the classes
-    /// from the chord name (root + quality intervals).  Returns an empty set when the
-    /// name cannot be parsed.
+    /// Returns the set of pitch classes (0 = C … 11 = B) sounded by <paramref name="chord"/>,
+    /// shifted up by <paramref name="capo"/> semitones (mod 12).  Uses the fingering when
+    /// available (exact voicing), otherwise derives the classes from the chord name (root +
+    /// quality intervals).  Returns an empty set when the name cannot be parsed.
     /// </summary>
-    public static IReadOnlySet<int> GetPitchClasses(Chord chord)
+    /// <param name="chord">The chord shape/name as printed in the tab.</param>
+    /// <param name="capo">
+    /// The fret the song's capo sits on (0 = none).  A capo raises every open string's
+    /// sounding pitch by <paramref name="capo"/> semitones, so the chord SHAPE fretted
+    /// (what <paramref name="chord"/> describes) sounds <paramref name="capo"/> semitones
+    /// higher than the same shape would with no capo.
+    /// </param>
+    public static IReadOnlySet<int> GetPitchClasses(Chord chord, int capo = 0)
     {
         if (chord.Frets is { Length: 6 } frets)
         {
@@ -31,14 +38,14 @@ public static class ChordNotes
             {
                 if (frets[s] >= 0)
                 {
-                    classes.Add((ChordNotes.openStringMidi[s] + frets[s]) % 12);
+                    classes.Add(ChordNotes.ShiftByCapo(ChordNotes.openStringMidi[s] + frets[s], capo));
                 }
             }
 
             return classes;
         }
 
-        return ChordNotes.GetPitchClassesFromName(chord.Name);
+        return ChordNotes.GetPitchClassesFromName(chord.Name, capo);
     }
 
     /// <summary>
@@ -109,7 +116,7 @@ public static class ChordNotes
         return pc;
     }
 
-    private static IReadOnlySet<int> GetPitchClassesFromName(string chordName)
+    private static IReadOnlySet<int> GetPitchClassesFromName(string chordName, int capo = 0)
     {
         // Reject ordinary words that merely start with A–G ("Chorus", "Bridge")
         // using the same strict token validation as the tab parser.
@@ -130,20 +137,24 @@ public static class ChordNotes
         int qualityStart = chordName.Length > 1 && (chordName[1] == '#' || chordName[1] == 'b') ? 2 : 1;
         var quality = chordName[qualityStart..];
 
-        var classes = new HashSet<int> { root.Value };
+        var classes = new HashSet<int> { ChordNotes.ShiftByCapo(root.Value, capo) };
         foreach (var interval in ChordNotes.QualityIntervals(quality))
         {
-            classes.Add((root.Value + interval) % 12);
+            classes.Add(ChordNotes.ShiftByCapo(root.Value + interval, capo));
         }
 
         var bass = ChordNotes.ParseRootPitchClass(bassName);
         if (bass != null)
         {
-            classes.Add(bass.Value);
+            classes.Add(ChordNotes.ShiftByCapo(bass.Value, capo));
         }
 
         return classes;
     }
+
+    /// <summary>Shifts a pitch class up by <paramref name="capo"/> semitones, wrapping mod 12.</summary>
+    private static int ShiftByCapo(int pitchClass, int capo) =>
+        ((pitchClass + capo) % 12 + 12) % 12;
 
     /// <summary>Intervals above the root (excluding the root itself) for a quality suffix.</summary>
     private static IEnumerable<int> QualityIntervals(string quality)

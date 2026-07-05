@@ -45,12 +45,13 @@ public sealed class ChordTrackerService : IChordTrackerService
     public IObservable<ChordTrackingUpdate> TrackChords(
         AudioCaptureDevice device,
         IReadOnlyList<PerformanceLine> lines,
-        IObservable<int> position)
+        IObservable<int> position,
+        int capo = 0)
     {
         return Observable.Create<ChordTrackingUpdate>(observer =>
         {
-            var matcher = new ChordTemplateMatcher(lines.SelectMany(l => l.Chords));
-            var session = new TrackingSession(lines, matcher, observer.OnNext);
+            var matcher = new ChordTemplateMatcher(lines.SelectMany(l => l.Chords), capo);
+            var session = new TrackingSession(lines, matcher, capo, observer.OnNext);
             var scheduler = this.schedulerFactory();
 
             var subscriptions = new CompositeDisposable(scheduler as IDisposable ?? Disposable.Empty);
@@ -78,6 +79,7 @@ public sealed class ChordTrackerService : IChordTrackerService
     {
         private readonly IReadOnlyList<PerformanceLine> lines;
         private readonly ChordTemplateMatcher matcher;
+        private readonly int capo;
         private readonly Action<ChordTrackingUpdate> emit;
         private readonly ChromaExtractor chroma = new(TargetSampleRate);
         private readonly SlidingAudioWindow slidingWindow = new(TargetSampleRate, WindowSize, HopSize);
@@ -87,10 +89,12 @@ public sealed class ChordTrackerService : IChordTrackerService
         public TrackingSession(
             IReadOnlyList<PerformanceLine> lines,
             ChordTemplateMatcher matcher,
+            int capo,
             Action<ChordTrackingUpdate> emit)
         {
             this.lines = lines;
             this.matcher = matcher;
+            this.capo = capo;
             this.emit = emit;
         }
 
@@ -129,10 +133,10 @@ public sealed class ChordTrackerService : IChordTrackerService
 
             // Advance only when the detected chord belongs to the NEXT line but not the
             // current one — a chord shared by both lines is no evidence of progression.
-            bool inNext = TrackingSession.ContainsChord(this.lines[next], match.PitchClasses);
+            bool inNext = this.ContainsChord(this.lines[next], match.PitchClasses);
             bool inCurrent = this.currentIndex >= 0 &&
                              this.currentIndex < this.lines.Count &&
-                             TrackingSession.ContainsChord(this.lines[this.currentIndex], match.PitchClasses);
+                             this.ContainsChord(this.lines[this.currentIndex], match.PitchClasses);
 
             if (inNext && !inCurrent)
             {
@@ -150,7 +154,7 @@ public sealed class ChordTrackerService : IChordTrackerService
             }
         }
 
-        private static bool ContainsChord(PerformanceLine line, IReadOnlySet<int> pitchClasses) =>
-            line.Chords.Any(c => ChordNotes.GetPitchClasses(c).SetEquals(pitchClasses));
+        private bool ContainsChord(PerformanceLine line, IReadOnlySet<int> pitchClasses) =>
+            line.Chords.Any(c => ChordNotes.GetPitchClasses(c, this.capo).SetEquals(pitchClasses));
     }
 }

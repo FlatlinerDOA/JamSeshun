@@ -47,9 +47,20 @@ public interface IChordTrackerService : IDisposable
     /// (emitting the initial value immediately, then on every navigation).  Emitted
     /// indices are always greater than the latest observed position.  Does not complete
     /// on its own; dispose the subscription to stop tracking.
+    ///
+    /// <para>
+    /// <paramref name="capo"/> is the fret the song's capo sits on (0 = none).  Chord
+    /// names in <paramref name="lines"/> describe the SHAPE fretted, not the concert
+    /// pitch — a capo raises every open string's sounding pitch by <paramref name="capo"/>
+    /// semitones, so the microphone hears audio transposed up by that amount relative to
+    /// the shape's open-position pitch.  Pitch-class comparisons (template building and
+    /// current/next-line matching) are transposed by the same amount so the chord names
+    /// as printed in the tab match the actual sounding audio.
+    /// </para>
     /// </summary>
     IObservable<ChordTrackingUpdate> TrackChords(
         AudioCaptureDevice device,
         IReadOnlyList<PerformanceLine> lines,
-        IObservable<int> position);
+        IObservable<int> position,
+        int capo = 0);
 }

@@ -131,16 +131,29 @@ consecutive lines share a chord vocabulary (e.g. Wonderwall, where every line co
 Em7), a shared chord is no evidence of progression and must not advance.  For such
 songs the lyric tracker carries the progression; chord tracking stays high-precision.
 
+**Capo-aware:** chord names in a tab describe the SHAPE fretted, not the concert pitch —
+a capo raises every open string's sounding pitch by the capo's fret count, so the
+microphone always hears audio transposed above what the printed shape implies.
+`SavedTab.Capo` is threaded from `PerformanceViewModel` through
+`IChordTrackerService.TrackChords`, into `ChordTemplateMatcher`, down to
+`ChordNotes.GetPitchClasses(chord, capo)`, so both template building and the
+current/next-line `ContainsChord` comparisons happen in the same capo-transposed
+pitch-class space as the actual sounding audio.  A single song is assumed to keep one
+capo position throughout.
+
 ### Service Interface
 
 ```csharp
 // Returns ChordTrackingUpdate (lineIndex + detectedChord + confidence)
 // so the UI can dim the tracking indicator at low confidence.
 // `position` is the caller's current line index (manual navigation included).
+// `capo` (0 = none) transposes pitch-class comparisons so chord names as printed
+// in the tab (the shape fretted) match the actual capo-transposed sounding audio.
 IObservable<ChordTrackingUpdate> TrackChords(
     AudioCaptureDevice device,
     IReadOnlyList<PerformanceLine> lines,
-    IObservable<int> position);
+    IObservable<int> position,
+    int capo = 0);
 ```
 
 ---

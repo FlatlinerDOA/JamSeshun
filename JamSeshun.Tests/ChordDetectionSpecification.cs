@@ -93,4 +93,44 @@ public class ChordDetectionSpecification
 
         Assert.Equal(2, matcher.TemplateCount);
     }
+
+    // ── Capo transposition ────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("G", 1)]
+    [InlineData("C", 1)]
+    [InlineData("D", 2)]
+    [InlineData("Em", 2)]
+    public void CapoAwareVocabulary_ClassifiesCapoTransposedAudioAsTheWrittenChord(string played, int capo)
+    {
+        // The vocabulary is named exactly as printed in the tab (the shape fretted);
+        // the audio is synthesised as it actually SOUNDS with a capo at the given fret.
+        var matcher = new ChordTemplateMatcher(
+            new[] { "G", "C", "D", "Em" }.Select(ChordDetectionSpecification.Chord), capo);
+        var chroma = new ChromaExtractor(SampleRate);
+        var audio = AudioSynthesizer.Chord(played, 1.0, SampleRate, capoSemitones: capo);
+
+        var match = matcher.Classify(chroma.Extract(audio.AsSpan(0, WindowSize)));
+
+        Assert.NotNull(match);
+        Assert.Equal(played, match.ChordName);
+        Assert.True(match.Confidence >= 0.6f, $"confidence {match.Confidence} below advance gate");
+    }
+
+    [Fact]
+    public void UntransposedAudio_AgainstACapoAwareMatcher_DoesNotConfidentlyMatch()
+    {
+        // Negative/regression guard: if the capo threading did nothing, this would
+        // still match "G" confidently.  Audio synthesised WITHOUT the capo shift, fed
+        // into a capo:1 matcher, must not be classified as "G" with high confidence.
+        var matcher = new ChordTemplateMatcher(
+            new[] { "G", "C", "D", "Em" }.Select(ChordDetectionSpecification.Chord), capo: 1);
+        var chroma = new ChromaExtractor(SampleRate);
+        var audio = AudioSynthesizer.Chord("G", 1.0, SampleRate, capoSemitones: 0);
+
+        var match = matcher.Classify(chroma.Extract(audio.AsSpan(0, WindowSize)));
+
+        Assert.True(match == null || match.ChordName != "G" || match.Confidence < 0.6f,
+            $"untransposed G matched 'G' confidently ({match?.Confidence}) against a capo-1 matcher");
+    }
 }

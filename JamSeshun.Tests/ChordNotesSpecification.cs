@@ -112,4 +112,38 @@ public class ChordNotesSpecification
     {
         Assert.Empty(ChordNotes.GetPitchClasses(new Chord("Chorus")));
     }
+
+    // ── Capo transposition ────────────────────────────────────────────────────
+
+    [Fact]
+    public void GetPitchClasses_CapoZero_LeavesPitchClassesUnchanged()
+    {
+        // Regression guard: default/explicit capo 0 must reproduce the pre-fix result.
+        var chord = new Chord("G", ChordLibrary.Lookup("G"));
+
+        var classes = ChordNotes.GetPitchClasses(chord, capo: 0);
+
+        Assert.Equal(new HashSet<int> { 7, 11, 2 }, classes);
+    }
+
+    [Fact]
+    public void GetPitchClasses_CapoOne_ShiftsOpenGShapeToAbMajor()
+    {
+        // Open G (G B D = 7, 11, 2) fretted above a capo 1 sounds like Ab major
+        // (Ab C Eb = 8, 0, 3) — the well-known "capo 1 + open G shape sounds like Ab" fact.
+        var chord = new Chord("G", ChordLibrary.Lookup("G"));
+
+        var classes = ChordNotes.GetPitchClasses(chord, capo: 1);
+
+        Assert.Equal(new HashSet<int> { 8, 0, 3 }, classes);
+    }
+
+    [Fact]
+    public void GetPitchClasses_CapoShiftsPitchClassesFromName_TooWhenNoFingeringGiven()
+    {
+        // C (0, 4, 7) at capo 2 sounds like D major (2, 6, 9).
+        var classes = ChordNotes.GetPitchClasses(new Chord("C"), capo: 2);
+
+        Assert.Equal(new HashSet<int> { 2, 6, 9 }, classes);
+    }
 }

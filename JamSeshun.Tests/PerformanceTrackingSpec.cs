@@ -234,7 +234,8 @@ public class PerformanceTrackingSpec
         public IObservable<ChordTrackingUpdate> TrackChords(
             AudioCaptureDevice device,
             IReadOnlyList<PerformanceLine> lines,
-            IObservable<int> position)
+            IObservable<int> position,
+            int capo = 0)
         {
             return Observable.Create<ChordTrackingUpdate>(observer =>
             {

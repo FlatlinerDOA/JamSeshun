@@ -33,6 +33,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
     private bool audioTrackingEnabled;
     private string lastDetectedChord = string.Empty;
     private float trackingConfidence;
+    private int capo;
 
     // Non-null only while the view is shown; holds the live tracker subscriptions.
     private SerialDisposable? trackingSlot;
@@ -114,6 +115,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
             parts.Add($"Capo {tab.Capo}");
         }
 
+        this.capo = tab.Capo;
         this.TuningDisplay = string.Join("  ·  ", parts);
         this.performanceLines = WikiTabParser.ParsePerformanceLines(tab.Content);
         this.currentIndex = 0;
@@ -252,7 +254,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
         if (this.chordTracker != null && this.guitarDevice != null)
         {
             subscriptions.Add(this.chordTracker
-                .TrackChords(this.guitarDevice, lines, this.position)
+                .TrackChords(this.guitarDevice, lines, this.position, this.capo)
                 .ObserveOn(AvaloniaScheduler.Instance)
                 .Subscribe(this.OnChordTrackingUpdate));
         }

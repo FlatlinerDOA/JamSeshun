@@ -44,7 +44,10 @@ internal sealed class AndroidAudioCaptureService : IAudioCaptureService, IDispos
             }
         }
 
-        return this.sharedStreams.GetOrAdd(device.Id, id => this.CreateCaptureStream(device.Id).Publish().RefCount());
+        // ShareResettable rather than Publish().RefCount(): these entries are cached for
+        // the life of the service, and a plain published subject keeps replaying any
+        // AudioRecord failure to every later subscriber — see SharedStream.
+        return this.sharedStreams.GetOrAdd(device.Id, id => this.CreateCaptureStream(id).ShareResettable());
     }
 
     public void Dispose()

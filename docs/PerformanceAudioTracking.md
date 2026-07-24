@@ -4,7 +4,7 @@
 
 | Piece | Status |
 |---|---|
-| Raw capture abstraction (`IAudioCaptureService`, shared per device via `Publish().RefCount()`) | ✅ implemented (`SoundFlowAudioCaptureService` on Desktop) |
+| Raw capture abstraction (`IAudioCaptureService`, shared per device via `SharedStream.ShareResettable`) | ✅ implemented (`SoundFlowAudioCaptureService` on Desktop, `AndroidAudioCaptureService` on Android) |
 | 44.1 kHz → 16 kHz anti-aliased resampling (`AudioResampler`, streaming polyphase) | ✅ implemented + tested |
 | Chord detection (`ChordTrackerService`: chroma + template matching against the song's chord vocabulary) | ✅ implemented + tested (DSP engine; DistilHuBERT ONNX remains a drop-in upgrade) |
 | Lyric matching (`LyricMatcher`: token overlap, hysteresis, empty-line skip) | ✅ implemented + tested |
@@ -33,6 +33,17 @@ available as an override.  Both expose a confidence value (see `ChordTrackingUpd
 `LyricTrackingUpdate` in `Services/Tuning/TrackingUpdate.cs`) so the UI can dim an
 indicator at low confidence — the same pattern as the tuner's `DisplayOpacity`.
 
+### Confidence is a margin, not a softmax over the vocabulary
+
+`ChordTemplateMatcher.Classify` scores confidence as the best template's margin over its
+**closest rival**, squashed to (0.5, 1) — not as a softmax over every template.  A full
+softmax makes confidence fall purely because the song has more chords in it: every extra
+template adds another positive term to the denominator, so under a fixed 0.6 advance gate
+a four-chord song auto-advanced while an eight-chord song with an identically clean
+detection did not.  Only the runner-up carries information about whether the frame is
+ambiguous.  Two identical templates still land at exactly 0.5, so the enharmonic-duplicate
+guard in the constructor still matters.
+
 > **Key constraint:** The existing tuner pipeline captures at **44.1 kHz**.
 > All ASR and chord-detection models below expect **16 kHz** input.
 > The **anti-aliased resampling stage** (44.1 k → 16 k) is implemented as
@@ -46,7 +57,7 @@ indicator at low confidence — the same pattern as the tuner's `DisplayOpacity`
 > **Implemented engine:** `ChordTrackerService` ships with a pure-DSP detector —
 > a 12-bin chromagram (`ChromaExtractor`, 512 ms window / 128 ms hop at 16 kHz) matched
 > against templates built from the song's own chord fingerings
-> (`ChordTemplateMatcher`, cosine similarity + softmax confidence).  Restricting the
+> (`ChordTemplateMatcher`, cosine similarity + best-vs-runner-up margin).  Restricting the
 > vocabulary to the tab's chords is what makes this reliable, and per-hop cost is a
 > single 8192-point FFT — no model download, no cold start, latency bounded by the
 > analysis window rather than inference.  The DistilHuBERT model below remains the
@@ -121,9 +132,18 @@ detected       = pitch_class_set(detectedChord)
 if detected ∈ next_chords AND detected ∉ current_chords AND confidence ≥ 0.6:
     hold_count++
     if hold_count ≥ 2: advance()
+elif detected ∈ current_chords:
+    hold_count = 0              # contradicted: still on the current line
 else:
-    hold_count = 0
+    hold_count = max(hold_count - 1, 0)   # uninformative hop: decay, do not reset
 ```
+
+**The hold decays, it does not reset.** Requiring strictly consecutive matching hops
+looks stricter but is mostly a way to never advance: at a 128 ms hop, a pick attack, a
+gap between strums, or a passing chord the vocabulary cannot explain each cost the whole
+count, and on real strummed audio those are routine.  Decaying still demands two *net*
+matching hops, while a chord belonging to the current line — the only real evidence
+against an in-progress advance — resets outright, so precision is unchanged.
 
 Comparison is by **pitch-class set** (which subsumes enharmonic normalisation — Db and
 C# produce the same set).  The `detected ∉ current_chords` guard is essential: when
@@ -248,8 +268,22 @@ The VM owns a `BehaviorSubject<int> position` that it pushes on every navigation
 subscriptions.Add(this.chordTracker
     .TrackChords(device, lines, this.position)
     .ObserveOn(AvaloniaScheduler.Instance)
-    .Subscribe(this.OnChordTrackingUpdate));   // updates indicator state + AdvanceTo
+    .Subscribe(this.OnChordTrackingUpdate,     // updates indicator state + AdvanceTo
+               this.OnTrackingFailed));        // never omit: see below
 ```
+
+> **Always pass an error handler.** These subscriptions observe on the UI thread, so a
+> `Subscribe(onNext)` with no `onError` rethrows a capture failure — unplugged
+> microphone, revoked permission, Android `AudioRecord` read error — straight onto the
+> dispatcher.  `OnTrackingFailed` records it instead, `TrackingStatusText` shows
+> "mic unavailable", and `UpdateTracking` clears it on every restart so toggling
+> tracking off and on retries.
+
+> **Device identity is re-validated on every show.** A remembered `GuitarDevice` /
+> `VoiceDevice` is kept only while it is still in the discovered list; otherwise it falls
+> back to the default.  `Devices` is left untouched when the list is unchanged — clearing
+> it makes the bound ComboBox null its `SelectedItem` and write that null back into the
+> view model, tearing down live tracking on every re-show.
 
 > **Index space:** both trackers emit indices into the `PerformanceLine` list.
 > The `AdvanceTo` guard (`lineIndex > currentIndex`) prevents backward movement even if
@@ -359,5 +393,18 @@ threads; they must `ObserveOn(AvaloniaScheduler.Instance)` before emitting to th
   battery on mobile.  The energy VAD gate and single-flight drop policy already reduce
   duty cycle; consider widening the stride further on battery power.
 - **Chroma robustness on real audio:** the DSP detector is validated on synthesised
-  chords; tune `MinSimilarity` / confidence temperature against real strummed-guitar
+  chords; tune `MinSimilarity` / `MarginTemperature` against real strummed-guitar
   recordings (mic bleed, body resonance, out-of-tune strings).
+- **Chroma is dominated by its top octaves — measure this next.** `ChromaExtractor`
+  accumulates every linear FFT bin between 70 Hz and 5 kHz with equal weight.  At an
+  8192-point FFT and 16 kHz that is ~2 500 bins, and roughly half of them sit above
+  2.5 kHz where a guitar has mostly pick/string noise rather than chord tones.  Broadband
+  noise therefore adds a near-uniform pedestal to all twelve chroma bins, which pulls
+  cosine similarity toward ~0.5 for *every* template at once and squeezes the margin the
+  advance gate depends on — the failure mode the synthesised tests cannot reproduce,
+  because `AudioSynthesizer` emits five clean harmonics and nothing above ~2 kHz.
+  Candidate fixes, in order of how much they need measuring: lower `MaxFrequency` toward
+  the top of the useful harmonic range; weight each bin by octave so the fundamental
+  region is not outnumbered; or subtract a per-frame chroma floor (spectral whitening)
+  before normalising.  All three change what "noise" scores, so land them against
+  recorded strummed guitar rather than by adjusting constants against the current specs.

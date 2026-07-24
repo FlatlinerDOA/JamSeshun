@@ -9,9 +9,9 @@ namespace JamSeshun.Services.Tuning;
 /// <param name="PitchClasses">Pitch-class set of the matched chord, for set-based comparison.</param>
 /// <param name="Similarity">Raw cosine similarity of chroma vs template (0–1).</param>
 /// <param name="Confidence">
-/// Softmax-normalised confidence over the whole vocabulary (0–1): high only when the
-/// best template fits clearly better than the alternatives, low on ambiguous or noisy
-/// frames — feeds the ≥ 0.6 advance gate and the UI indicator.
+/// Confidence in the best match over its closest rival (0.5–1): high only when the best
+/// template fits clearly better than the runner-up, ~0.5 on ambiguous or noisy frames —
+/// feeds the ≥ 0.6 advance gate and the UI indicator.
 /// </param>
 public sealed record ChordMatch(
     string ChordName,
@@ -29,7 +29,7 @@ public sealed class ChordTemplateMatcher
 {
     private const float RootEmphasis = 1.25f;   // roots ring loudest on guitar
     private const float MinSimilarity = 0.55f;  // below this, the frame is noise — no match
-    private const double SoftmaxTemperature = 0.05;
+    private const double MarginTemperature = 0.05;
 
     private readonly List<(string Name, IReadOnlySet<int> PitchClasses, float[] Template)> templates = [];
 
@@ -78,7 +78,7 @@ public sealed class ChordTemplateMatcher
 
         int bestIndex = -1;
         double bestSimilarity = double.MinValue;
-        Span<double> similarities = stackalloc double[this.templates.Count];
+        double runnerUpSimilarity = double.MinValue;
 
         for (int t = 0; t < this.templates.Count; t++)
         {
@@ -89,11 +89,15 @@ public sealed class ChordTemplateMatcher
                 dot += (double)chroma[i] * template[i];
             }
 
-            similarities[t] = dot;
             if (dot > bestSimilarity)
             {
+                runnerUpSimilarity = bestSimilarity;
                 bestSimilarity = dot;
                 bestIndex = t;
+            }
+            else if (dot > runnerUpSimilarity)
+            {
+                runnerUpSimilarity = dot;
             }
         }
 
@@ -102,16 +106,20 @@ public sealed class ChordTemplateMatcher
             return null;
         }
 
-        // Softmax over similarities: confidence reflects the margin over the
-        // runner-up rather than the absolute fit alone.
-        double denominator = 0;
-        for (int t = 0; t < similarities.Length; t++)
-        {
-            denominator += Math.Exp((similarities[t] - bestSimilarity) / SoftmaxTemperature);
-        }
+        // Confidence is the best template's margin over its CLOSEST RIVAL, squashed to
+        // (0.5, 1).  It deliberately ignores the rest of the vocabulary: a softmax over
+        // every template makes confidence fall as the vocabulary grows, because each
+        // extra chord adds another positive term to the denominator.  Under a fixed
+        // advance gate that penalised songs for having more chords — a four-chord song
+        // cleared 0.6 while an eight-chord song with an identically clean detection did
+        // not, so busier songs simply stopped auto-advancing.  Only the runner-up
+        // carries information about whether this frame is ambiguous.
+        double confidence = this.templates.Count > 1
+            ? 1.0 / (1.0 + Math.Exp((runnerUpSimilarity - bestSimilarity) / MarginTemperature))
+            : 1.0;
 
         var (name, pitchClasses, _) = this.templates[bestIndex];
-        return new ChordMatch(name, pitchClasses, (float)bestSimilarity, (float)(1.0 / denominator));
+        return new ChordMatch(name, pitchClasses, (float)bestSimilarity, (float)confidence);
     }
 
     private static float[] BuildTemplate(Chord chord, IReadOnlySet<int> pitchClasses, int capo = 0)

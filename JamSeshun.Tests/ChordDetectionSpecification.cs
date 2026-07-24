@@ -84,6 +84,27 @@ public class ChordDetectionSpecification
     }
 
     [Fact]
+    public void ConfidenceDoesNotShrinkAsTheVocabularyGrows()
+    {
+        // Confidence used to be a softmax over every template, so each extra chord in
+        // the song added another positive term to the denominator and pushed confidence
+        // down — under a fixed 0.6 advance gate, busier songs simply stopped
+        // auto-advancing however cleanly the chord was detected.  Am/F/A share no pitch
+        // class with G major, so they cannot be a closer rival than the runner-up in the
+        // small vocabulary: a correct confidence measure is unmoved by them.
+        var small = ChordDetectionSpecification.Detect("G", "G", "C", "D", "Em");
+        var large = ChordDetectionSpecification.Detect("G", "G", "C", "D", "Em", "Am", "F", "A");
+
+        Assert.NotNull(small);
+        Assert.NotNull(large);
+        Assert.Equal("G", large.ChordName);
+        Assert.True(large.Confidence >= 0.6f, $"confidence {large.Confidence} below advance gate");
+        Assert.True(
+            Math.Abs(large.Confidence - small.Confidence) < 0.001f,
+            $"confidence moved from {small.Confidence} to {large.Confidence} on unrelated chords");
+    }
+
+    [Fact]
     public void EnharmonicDuplicatesInVocabulary_DoNotSplitConfidence()
     {
         // Db and C# are the same chord; if both templates survived, softmax

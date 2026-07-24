@@ -33,6 +33,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
     private bool audioTrackingEnabled;
     private string lastDetectedChord = string.Empty;
     private float trackingConfidence;
+    private string? trackingError;
     private int capo;
 
     // Non-null only while the view is shown; holds the live tracker subscriptions.
@@ -75,15 +76,24 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
                 .ObserveOn(AvaloniaScheduler.Instance)
                 .Subscribe(devices =>
                 {
-                    this.Devices.Clear();
-                    foreach (var d in devices)
-                    {
-                        this.Devices.Add(d);
-                    }
+                    this.ReplaceDevices(devices);
 
                     var defaultDevice = devices.FirstOrDefault(d => d.IsDefault) ?? devices.FirstOrDefault();
-                    this.guitarDevice ??= defaultDevice;
-                    this.voiceDevice ??= defaultDevice;
+
+                    // Keep the user's pick only while that device still exists.  A
+                    // remembered device that has gone away (unplugged, or a different
+                    // machine on the next launch) would otherwise be handed to Capture()
+                    // on every attempt and fail every time, with the toggle still on.
+                    if (this.guitarDevice == null || !devices.Contains(this.guitarDevice))
+                    {
+                        this.guitarDevice = defaultDevice;
+                    }
+
+                    if (this.voiceDevice == null || !devices.Contains(this.voiceDevice))
+                    {
+                        this.voiceDevice = defaultDevice;
+                    }
+
                     this.OnPropertyChanged(nameof(PerformanceViewModel.GuitarDevice));
                     this.OnPropertyChanged(nameof(PerformanceViewModel.VoiceDevice));
                     this.UpdateTracking();
@@ -207,8 +217,11 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
 
     /// <summary>True while at least one tracker subscription is live (enabled, shown, a device found).</summary>
     public bool IsTracking =>
-        this.audioTrackingEnabled && this.trackingSlot != null &&
+        this.audioTrackingEnabled && this.trackingSlot != null && this.trackingError == null &&
         (this.guitarDevice != null || this.voiceDevice != null);
+
+    /// <summary>True when a tracker's capture stream failed; cleared by restarting tracking.</summary>
+    public bool HasTrackingError => this.trackingError != null;
 
     /// <summary>Chord label from the most recent auto-advance, for the tracking indicator.</summary>
     public string LastDetectedChord => this.lastDetectedChord;
@@ -221,6 +234,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
 
     public string TrackingStatusText =>
         !this.audioTrackingEnabled ? string.Empty
+        : this.trackingError != null ? "mic unavailable"
         : string.IsNullOrEmpty(this.lastDetectedChord) ? "listening…"
         : this.lastDetectedChord;
 
@@ -240,11 +254,15 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
             return; // not shown
         }
 
+        // Any restart is also a retry: clear a previous failure so the indicator stops
+        // reporting a microphone that may well be back.
+        this.trackingError = null;
+
         bool hasAnyDevice = this.guitarDevice != null || this.voiceDevice != null;
         if (!this.audioTrackingEnabled || !hasAnyDevice || !this.HasLines)
         {
             this.trackingSlot.Disposable = Disposable.Empty;
-            this.OnPropertyChanged(nameof(PerformanceViewModel.IsTracking));
+            this.NotifyTrackingChanged();
             return;
         }
 
@@ -256,7 +274,7 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
             subscriptions.Add(this.chordTracker
                 .TrackChords(this.guitarDevice, lines, this.position, this.capo)
                 .ObserveOn(AvaloniaScheduler.Instance)
-                .Subscribe(this.OnChordTrackingUpdate));
+                .Subscribe(this.OnChordTrackingUpdate, this.OnTrackingFailed));
         }
 
         if (this.lyricTracker != null && this.voiceDevice != null)
@@ -265,11 +283,27 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
             subscriptions.Add(this.lyricTracker
                 .TrackLyrics(this.voiceDevice, lyrics, this.position)
                 .ObserveOn(AvaloniaScheduler.Instance)
-                .Subscribe(this.OnLyricTrackingUpdate));
+                .Subscribe(this.OnLyricTrackingUpdate, this.OnTrackingFailed));
         }
 
         this.trackingSlot.Disposable = subscriptions;
-        this.OnPropertyChanged(nameof(PerformanceViewModel.IsTracking));
+        this.NotifyTrackingChanged();
+    }
+
+    /// <summary>
+    /// A tracker's capture stream failed — microphone unplugged, permission revoked, an
+    /// Android <c>AudioRecord</c> read error.  Rx has already torn that subscription
+    /// down, so the failure has to be recorded here: subscribing without an error
+    /// handler rethrows OnError on the scheduler that delivered it, which for these
+    /// subscriptions is the UI thread, so a mid-song microphone failure took the app
+    /// down instead of showing anything.  Toggling tracking off and on retries.
+    /// </summary>
+    private void OnTrackingFailed(Exception error)
+    {
+        this.trackingError = error.Message;
+        this.lastDetectedChord = string.Empty;
+        this.trackingConfidence = 0f;
+        this.NotifyTrackingChanged();
     }
 
     private void OnChordTrackingUpdate(ChordTrackingUpdate update)
@@ -293,6 +327,28 @@ public class PerformanceViewModel : ViewModelBase, IOnShow, IDisposable
         this.OnPropertyChanged(nameof(PerformanceViewModel.TrackingConfidence));
         this.OnPropertyChanged(nameof(PerformanceViewModel.TrackingIndicatorOpacity));
         this.OnPropertyChanged(nameof(PerformanceViewModel.TrackingStatusText));
+        this.OnPropertyChanged(nameof(PerformanceViewModel.HasTrackingError));
+        this.OnPropertyChanged(nameof(PerformanceViewModel.IsTracking));
+    }
+
+    /// <summary>
+    /// Refreshes <see cref="Devices"/> in place, skipping an unchanged list.  Clearing
+    /// unconditionally makes the bound ComboBox null its SelectedItem and write that
+    /// null straight back into <see cref="GuitarDevice"/>/<see cref="VoiceDevice"/>,
+    /// which tears down live tracking every time the view is re-shown.
+    /// </summary>
+    private void ReplaceDevices(IReadOnlyList<AudioCaptureDevice> devices)
+    {
+        if (this.Devices.SequenceEqual(devices))
+        {
+            return;
+        }
+
+        this.Devices.Clear();
+        foreach (var device in devices)
+        {
+            this.Devices.Add(device);
+        }
     }
 
     private void AdvanceTo(int lineIndex)

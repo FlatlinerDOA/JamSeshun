@@ -17,8 +17,11 @@ using System.Collections.Concurrent;
 /// <summary>
 /// Raw microphone capture for Windows/Linux via SoundFlow (MiniAudio backend).
 /// Emits 44.1 kHz mono float32 <see cref="AudioFrame"/>s.  Streams are shared per
-/// device (<c>Publish().RefCount()</c>) so the chord and lyric trackers listening at
-/// the same time open the device once — see <see cref="IAudioCaptureService"/>.
+/// device (<see cref="SharedStream.ShareResettable"/>) so the chord and lyric trackers
+/// listening at the same time open the device once — see <see cref="IAudioCaptureService"/>.
+/// Sharing must be resettable, not a plain <c>Publish().RefCount()</c>: the per-device
+/// entries below are cached for the life of the process, so a capture failure baked into
+/// a cached subject would never heal.
 /// </summary>
 internal sealed class SoundFlowAudioCaptureService : IAudioCaptureService, IDisposable
 {
@@ -35,7 +38,7 @@ internal sealed class SoundFlowAudioCaptureService : IAudioCaptureService, IDisp
                 .ToList());
 
     public IObservable<AudioFrame> Capture(AudioCaptureDevice device) =>
-        this.sharedStreams.GetOrAdd(device.Id, id => this.CreateCaptureStream(device.Id).Publish().RefCount());
+        this.sharedStreams.GetOrAdd(device.Id, id => this.CreateCaptureStream(id).ShareResettable());
 
     public void Dispose()
     {

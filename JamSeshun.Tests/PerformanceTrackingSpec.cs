@@ -189,6 +189,93 @@ public class PerformanceTrackingSpec
         Assert.Equal(MultiDeviceFakeAudioCaptureService.SecondaryDevice, this.chordTracker.LastDevice);
     }
 
+    // ── Failure handling ─────────────────────────────────────────────────────
+
+    [AvaloniaFact]
+    public void TrackerFailure_IsSurfacedInsteadOfThrowing()
+    {
+        var vm = this.CreateShownViewModel(out var shown);
+        using (shown)
+        {
+            vm.AudioTrackingEnabled = true;
+
+            // Without an onError handler Rx rethrows this on the scheduler that
+            // delivered it — here the UI thread — so a mid-song microphone failure
+            // took the app down rather than showing anything.
+            this.chordTracker.Fail(new InvalidOperationException("device lost"));
+
+            Assert.True(vm.HasTrackingError);
+            Assert.False(vm.IsTracking);
+            Assert.Equal("mic unavailable", vm.TrackingStatusText);
+        }
+    }
+
+    [AvaloniaFact]
+    public void RestartingTrackingAfterAFailure_ClearsTheErrorAndRetries()
+    {
+        var vm = this.CreateShownViewModel(out var shown);
+        using (shown)
+        {
+            vm.AudioTrackingEnabled = true;
+            this.chordTracker.Fail(new InvalidOperationException("device lost"));
+            Assert.True(vm.HasTrackingError);
+
+            vm.AudioTrackingEnabled = false;
+            vm.AudioTrackingEnabled = true;
+
+            Assert.False(vm.HasTrackingError);
+            Assert.True(vm.IsTracking);
+            Assert.Equal(1, this.chordTracker.ActiveSubscriptions);
+        }
+    }
+
+    [AvaloniaFact]
+    public void ADeviceThatHasGoneAway_FallsBackToTheDefaultOnTheNextShow()
+    {
+        var capture = new UnpluggableDeviceCaptureService();
+        var vm = new PerformanceViewModel(this.navigation, this.chordTracker, null, capture);
+        vm.LoadForTab(new SavedTab("Artist", "Song", PerformanceTrackingSpec.TabContent));
+
+        using (vm.OnShow())
+        {
+            vm.GuitarDevice = UnpluggableDeviceCaptureService.Removable;
+        }
+
+        capture.Unplug();
+        using var secondShow = vm.OnShow();
+
+        // Keeping the remembered device would hand a device that no longer exists to
+        // Capture() on every attempt, failing silently with the toggle still on.
+        Assert.Equal(UnpluggableDeviceCaptureService.Builtin, vm.GuitarDevice);
+    }
+
+    /// <summary>Capture service whose device list can shrink between shows (unplug).</summary>
+    private sealed class UnpluggableDeviceCaptureService : IAudioCaptureService
+    {
+        public static readonly AudioCaptureDevice Builtin = new(1, "Built-in Microphone", IsDefault: true);
+        public static readonly AudioCaptureDevice Removable = new(2, "USB Interface");
+
+        private bool isRemovableAttached = true;
+
+        public void Unplug()
+        {
+            this.isRemovableAttached = false;
+        }
+
+        public IObservable<IReadOnlyList<AudioCaptureDevice>> GetAudioCaptureDevices()
+        {
+            var devices = new List<AudioCaptureDevice> { UnpluggableDeviceCaptureService.Builtin };
+            if (this.isRemovableAttached)
+            {
+                devices.Add(UnpluggableDeviceCaptureService.Removable);
+            }
+
+            return Observable.Return<IReadOnlyList<AudioCaptureDevice>>(devices);
+        }
+
+        public IObservable<AudioFrame> Capture(AudioCaptureDevice device) => Observable.Never<AudioFrame>();
+    }
+
     /// <summary>Exposes two devices so guitar/voice routing tests can tell them apart.</summary>
     private sealed class MultiDeviceFakeAudioCaptureService : IAudioCaptureService
     {
@@ -222,6 +309,8 @@ public class PerformanceTrackingSpec
 
     private sealed class FakeChordTracker : IChordTrackerService
     {
+        private readonly List<IObserver<ChordTrackingUpdate>> observers = [];
+
         public Subject<ChordTrackingUpdate> Updates { get; } = new();
 
         public int ActiveSubscriptions { get; private set; }
@@ -230,6 +319,21 @@ public class PerformanceTrackingSpec
 
         /// <summary>Device the most recent subscription started with.</summary>
         public AudioCaptureDevice? LastDevice { get; private set; }
+
+        /// <summary>
+        /// Fails the live subscriptions the way a lost capture device does.  Kept
+        /// separate from <see cref="Updates"/> so a failure does not poison the subject
+        /// for the subscription that replaces it — the real capture services no longer
+        /// do that either (see <see cref="SharedStream"/>).
+        /// </summary>
+        public void Fail(Exception error)
+        {
+            // OnError detaches each observer, which mutates the list we are walking.
+            foreach (var observer in this.observers.ToList())
+            {
+                observer.OnError(error);
+            }
+        }
 
         public IObservable<ChordTrackingUpdate> TrackChords(
             AudioCaptureDevice device,
@@ -241,10 +345,15 @@ public class PerformanceTrackingSpec
             {
                 this.ActiveSubscriptions++;
                 this.LastDevice = device;
+                this.observers.Add(observer);
                 return new CompositeDisposable(
                     position.Subscribe(this.ObservedPositions.Add),
                     this.Updates.Subscribe(observer),
-                    Disposable.Create(() => this.ActiveSubscriptions--));
+                    Disposable.Create(() =>
+                    {
+                        this.observers.Remove(observer);
+                        this.ActiveSubscriptions--;
+                    }));
             });
         }
 

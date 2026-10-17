@@ -13,7 +13,10 @@ jobs:
     - name: Setup Xcode
       uses: maxim-lobanov/setup-xcode@v1.6.0
       with:
-        xcode-version: '26.5'
+        # The .NET 10 iOS workload (Microsoft.iOS.Sdk 26.5.10301) requires Xcode 26.6
+        # and hard-fails the build on anything older.  26.6 is installed on macos-26;
+        # 26.5 is only the image default, which is what this pin used to select.
+        xcode-version: '26.6'
     - uses: actions/checkout@v4
     - name: Setup .NET
       uses: actions/setup-dotnet@v4

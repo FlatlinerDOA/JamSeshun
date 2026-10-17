@@ -118,16 +118,18 @@ public sealed class ChordTrackerService : IChordTrackerService
                 return;
             }
 
+            // Near-silence between strums says nothing either way, so let the hold age
+            // instead of discarding it (see Decay).
             if (SlidingAudioWindow.Rms(window) < MinRms)
             {
-                this.holdCount = 0;
+                this.Decay();
                 return;
             }
 
             var match = this.matcher.Classify(this.chroma.Extract(window));
             if (match == null || match.Confidence < ConfidenceThreshold)
             {
-                this.holdCount = 0;
+                this.Decay();
                 return;
             }
 
@@ -147,10 +149,36 @@ public sealed class ChordTrackerService : IChordTrackerService
                     this.currentIndex = next; // advance locally too, ahead of position feedback
                     this.emit(new ChordTrackingUpdate(next, match.ChordName, match.Confidence));
                 }
+
+                return;
             }
-            else
+
+            if (inCurrent)
             {
+                // Positive evidence the player is still on the current line: that is a
+                // real contradiction of an in-progress advance, so drop the hold outright.
                 this.holdCount = 0;
+                return;
+            }
+
+            this.Decay();
+        }
+
+        /// <summary>
+        /// Ages the hold by one hop rather than clearing it.  <see cref="HoldHops"/>
+        /// used to require strictly consecutive matching hops, so any single
+        /// uninformative hop — a pick attack, a gap between strums, a chord the song's
+        /// vocabulary cannot explain — restarted the count from zero.  On real strummed
+        /// audio those are routine, and the gate could stall indefinitely even while the
+        /// right chord was being detected most of the time.  Decaying keeps the evidence
+        /// requirement (still two net matching hops) without demanding they be perfectly
+        /// adjacent, while a chord belonging to the current line still resets outright.
+        /// </summary>
+        private void Decay()
+        {
+            if (this.holdCount > 0)
+            {
+                this.holdCount--;
             }
         }
 

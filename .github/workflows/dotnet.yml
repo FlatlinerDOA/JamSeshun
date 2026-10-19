@@ -13,17 +13,30 @@ jobs:
     - name: Setup Xcode
       uses: maxim-lobanov/setup-xcode@v1.6.0
       with:
-        # The .NET 10 iOS workload (Microsoft.iOS.Sdk 26.5.10301) requires Xcode 26.6
-        # and hard-fails the build on anything older.  26.6 is installed on macos-26;
-        # 26.5 is only the image default, which is what this pin used to select.
+        # Must match what the pinned workload set's iOS SDK expects (26.5.10318
+        # declares XcodeVersion 26.6).  26.6 is the newest Xcode on the macos-26
+        # image; pinned explicitly so an image default change cannot move it.
         xcode-version: '26.6'
     - uses: actions/checkout@v4
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 10.0.x
+        # Pinned rather than 10.0.x because the workload set below is tied to a
+        # feature band (10.0.4xx).  Letting the SDK float across bands silently
+        # invalidates that pin.  10.0.402 is what 10.0.x already resolved to.
+        dotnet-version: '10.0.402'
+    # Pinned, because unpinned this installs the newest workload set and the newest
+    # one needs an Xcode that does not exist on any macos-26 runner: set 10.0.401.1
+    # moved the iOS SDK to 27.0.10722, which requires Xcode 27.0, while the image
+    # tops out at 26.6 — so the iOS build hard-fails, and because `dotnet build`
+    # fails there the Test step never runs at all.  10.0.401 is the newest band-400
+    # set still on iOS 26.5 (26.5.10318 -> Xcode 26.6).
+    #
+    # Drop this pin (and the xcode-version pin above) once the runner image ships
+    # Xcode 27.  `--version` is used instead of a global.json workloadVersion so the
+    # constraint stays in CI and local builds keep using whatever is installed.
     - name: Restore workloads
-      run: dotnet workload restore
+      run: dotnet workload restore --version 10.0.401
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
